@@ -47,10 +47,11 @@ module Administrate
         ApiKey.active.where(admin:).order(last_used_at: :desc).first
       end
 
+      # The feedback is already persisted; a broken notifier must not take the report down with it.
       def notify(feedback)
         Administrate::MCP.config.on_feedback.call(feedback)
-      rescue StandardError
-        nil
+      rescue StandardError => e
+        Administrate::MCP.config.on_error.call(e)
       end
     end
   end

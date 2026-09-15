@@ -48,6 +48,7 @@ module Administrate
                     :instrument,
                     :on_tool_call,
                     :on_feedback,
+                    :on_error,
                     :allow_localhost_redirects,
                     :default_client_name,
                     :sidekiq_stats_provider,
@@ -83,6 +84,7 @@ module Administrate
         @instrument = ->(tool_name:, admin:, &block) { block.call } # rubocop:disable Lint/UnusedBlockArgument
         @on_tool_call = ->(tool_name:, admin:, arguments:, scopes:) {}
         @on_feedback = ->(feedback) {}
+        @on_error = ->(exception) {}
         @allow_localhost_redirects = true
         @api_key_token_prefix = 'amcp_'
         @default_client_name = 'MCP Client'

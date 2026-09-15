@@ -116,6 +116,7 @@ class Configuration
                 :instrument,
                 :on_tool_call,
                 :on_feedback,
+                :on_error,
                 :allow_localhost_redirects,
                 :api_key_token_prefix,
                 :default_client_name,
@@ -144,6 +145,7 @@ class Configuration
     @instrument = ->(tool_name:, admin:, &block) { block.call }
     @on_tool_call = ->(tool_name:, admin:, arguments:, scopes:) {}
     @on_feedback = ->(feedback) {}
+    @on_error = ->(exception) {}
     @allow_localhost_redirects = true
     @api_key_token_prefix = 'amcp_'
     @default_client_name = 'MCP Client'
@@ -185,6 +187,7 @@ end
 | `instrument` | yields | Around-hook `(tool_name:, admin:, &block)` |
 | `on_tool_call` | no-op | Audit hook `(tool_name:, admin:, arguments:, scopes:)`, after the permission checks |
 | `on_feedback` | no-op | Called with each new `Feedback` record |
+| `on_error` | no-op | Called with an exception the engine swallowed, so you can report it |
 | `allow_localhost_redirects` | `true` | Whether loopback OAuth redirect URIs are accepted |
 | `api_key_token_prefix` | `'amcp_'` | Prefix that marks a bearer token as an API key. Cannot be blank |
 | `default_client_name` | `'MCP Client'` | Name given to a dynamically registered client that sends no `client_name` |

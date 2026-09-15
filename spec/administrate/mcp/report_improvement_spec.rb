@@ -29,11 +29,14 @@ RSpec.describe Administrate::MCP::ReportImprovement do
     expect(seen).to eq([result.feedback])
   end
 
-  it 'still succeeds when the on_feedback hook raises' do
+  it 'still succeeds when the on_feedback hook raises, and reports the exception' do
+    reported = []
     Administrate::MCP.config.on_feedback = ->(_feedback) { raise 'slack is down' }
+    Administrate::MCP.config.on_error = ->(exception) { reported << exception }
 
     expect(result).to be_success
     expect(result.feedback).to be_persisted
+    expect(reported.first.message).to eq('slack is down')
   end
 
   context 'with an invalid category' do
