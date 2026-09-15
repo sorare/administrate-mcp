@@ -18,7 +18,7 @@ class GadgetDashboard < Administrate::BaseDashboard
                  type: 'string',
                  description: 'The new label.'
                }
-             } do |record:, admin:, params:|
+             } do |record:, params:, **|
     record.update!(label: params[:label])
   end
 

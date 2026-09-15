@@ -12,6 +12,7 @@ require 'kaminari'
 require 'administrate'
 require 'pundit'
 require 'sidekiq'
+require 'sidekiq/api'
 require 'administrate/mcp'
 
 module Dummy

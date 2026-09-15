@@ -9,48 +9,36 @@ module Administrate
 
       def resource_metadata
         render json: {
-                 resource: "#{mcp_origin}/",
-                 authorization_servers: [mcp_origin],
-                 bearer_methods_supported: ['header']
-               }
+          resource: "#{mcp_origin}/",
+          authorization_servers: [mcp_origin],
+          bearer_methods_supported: ['header']
+        }
       end
 
       def server_metadata
         render json: {
-                 issuer: mcp_origin,
-                 authorization_endpoint: "#{admin_origin}#{Routes::AUTHORIZE_PATH}",
-                 token_endpoint: "#{mcp_origin}/oauth/token",
-                 registration_endpoint: "#{mcp_origin}/oauth/register",
-                 response_types_supported: ['code'],
-                 grant_types_supported: %w[authorization_code refresh_token],
-                 code_challenge_methods_supported: ['S256'],
-                 token_endpoint_auth_methods_supported: ['none']
-               }
+          issuer: mcp_origin,
+          authorization_endpoint: "#{admin_origin}#{Routes::AUTHORIZE_PATH}",
+          token_endpoint: "#{mcp_origin}/oauth/token",
+          registration_endpoint: "#{mcp_origin}/oauth/register",
+          response_types_supported: ['code'],
+          grant_types_supported: %w[authorization_code refresh_token],
+          code_challenge_methods_supported: ['S256'],
+          token_endpoint_auth_methods_supported: ['none']
+        }
       end
 
       def register
-        application =
-          OAuthApplication.new(
-            client_id: OAuthApplication.generate_client_id,
-            name: register_params[:client_name] || 'MCP Client',
-            redirect_uris: register_params[:redirect_uris] || []
-          )
+        application = build_application
+        return render(json: registration_error(application), status: :bad_request) unless application.save
 
-        if application.save
-          render json: {
-                   client_id: application.client_id,
-                   client_name: application.name,
-                   redirect_uris: application.redirect_uris,
-                   grant_types: application.grant_types
-                 },
-                 status: :created
-        else
-          render json: {
-                   error: 'invalid_client_metadata',
-                   error_description: application.errors.full_messages.join(', ')
-                 },
-                 status: :bad_request
-        end
+        render json: {
+                 client_id: application.client_id,
+                 client_name: application.name,
+                 redirect_uris: application.redirect_uris,
+                 grant_types: application.grant_types
+               },
+               status: :created
       end
 
       def authorize
@@ -65,7 +53,7 @@ module Administrate
         return render plain: error, status: :bad_request if error
 
         assign_consent_details
-        render 'administrate/mcp/oauth/authorize', layout: false
+        render 'administrate/mcp/o_auth/authorize', layout: false
       end
 
       def approve
@@ -76,7 +64,7 @@ module Administrate
         return unless redirect_uri
 
         if params[:deny].present?
-          return(redirect_to "#{redirect_uri}?error=access_denied&state=#{encoded_state}", allow_other_host: true)
+          return redirect_to "#{redirect_uri}?error=access_denied&state=#{encoded_state}", allow_other_host: true
         end
 
         grant = create_access_grant(application, redirect_uri)
@@ -96,6 +84,18 @@ module Administrate
       end
 
       private
+
+      def build_application
+        OAuthApplication.new(
+          client_id: OAuthApplication.generate_client_id,
+          name: register_params[:client_name] || 'MCP Client',
+          redirect_uris: register_params[:redirect_uris] || []
+        )
+      end
+
+      def registration_error(application)
+        { error: 'invalid_client_metadata', error_description: application.errors.full_messages.join(', ') }
+      end
 
       def handle_authorization_code
         result =

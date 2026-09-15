@@ -11,6 +11,10 @@ require 'database_cleaner/active_record'
 
 Dir[File.expand_path('support/**/*.rb', __dir__)].each { |f| require f }
 
+# Before any spec file references an engine constant: the models read `admin_class_name` when they
+# are autoloaded, exactly as a host application configures the engine from an initializer.
+ConfigureDummy.apply!
+
 ActiveRecord::Schema.verbose = false
 ActiveRecord::Migration.verbose = false
 
@@ -37,6 +41,4 @@ RSpec.configure do |config|
   config.before(:suite) { DatabaseCleaner.strategy = :truncation }
   config.around { |example| DatabaseCleaner.cleaning { example.run } }
   config.after { Administrate::MCP.reset_config! && ConfigureDummy.apply! }
-
-  config.before(:suite) { ConfigureDummy.apply! }
 end

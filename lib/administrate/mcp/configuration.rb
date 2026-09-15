@@ -58,23 +58,35 @@ module Administrate
                     :field_serializers
 
       def initialize
+        assign_identity
+        assign_hooks
+        assign_fields
+      end
+
+      def assign_identity
         @server_name = 'administrate_mcp'
         @server_version = VERSION
         @issuer = nil
         @admin_origin = nil
-        @current_admin = ->(_controller) { nil }
+        @current_admin = ->(_controller) {}
         @sign_in = nil
         @admin_class_name = 'Administrator'
         @authorization = default_authorization
         @default_required_roles = []
         @tool_paths = []
         @dashboard_paths = nil
+      end
+
+      def assign_hooks
         @instrument = ->(tool_name:, admin:, &block) { block.call } # rubocop:disable Lint/UnusedBlockArgument
-        @on_tool_call = ->(tool_name:, admin:, arguments:, scopes:) {} # rubocop:disable Lint/UnusedBlockArgument
-        @on_feedback = ->(feedback) {} # rubocop:disable Lint/UnusedBlockArgument
+        @on_tool_call = ->(tool_name:, admin:, arguments:, scopes:) {}
+        @on_feedback = ->(feedback) {}
         @allow_localhost_redirects = true
         @api_key_token_prefix = 'amcp_'
         @sidekiq_stats_provider = nil
+      end
+
+      def assign_fields
         @admin_route_namespace = :admin
         @admin_url_options = {}
         @skipped_field_classes = SKIPPED_FIELD_CLASSES.dup

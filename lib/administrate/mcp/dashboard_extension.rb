@@ -9,8 +9,8 @@ module Administrate
     # constants, read by the registry.
     module DashboardExtension
       module ClassMethods
-        def mcp_action(name, **opts, &invoke)
-          self.mcp_action_specs = [*mcp_action_specs, Administrate::MCP::Actions.build_spec(name, **opts, &invoke)]
+        def mcp_action(name, **, &)
+          self.mcp_action_specs = [*mcp_action_specs, Administrate::MCP::Actions.build_spec(name, **, &)]
         end
       end
 

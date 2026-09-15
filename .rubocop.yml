@@ -1,0 +1,74 @@
+plugins:
+  - rubocop-rails
+  - rubocop-rspec
+
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+  TargetRubyVersion: 3.2
+  Exclude:
+    - spec/dummy/db/schema.rb
+    - vendor/**/*
+
+Layout/LineLength:
+  Max: 120
+
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
+    - '*.gemspec'
+
+Metrics/ClassLength:
+  Max: 200
+  Exclude:
+    - spec/**/*
+
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+
+Rails/Output:
+  Enabled: false
+
+# The engine's controllers must not inherit from the host's ApplicationController: the JSON-RPC
+# endpoint takes no session, and the OAuth controller must render without the host's layout.
+Rails/ApplicationController:
+  Enabled: false
+
+Naming/FileName:
+  Exclude:
+    - lib/administrate-mcp.rb
+
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - db/migrate/*.rb
+
+Metrics/AbcSize:
+  Max: 25
+  Exclude:
+    - db/migrate/*.rb
+    - spec/support/*.rb
+
+RSpec/ExampleLength:
+  Max: 20
+
+RSpec/MultipleExpectations:
+  Max: 8
+
+RSpec/NestedGroups:
+  Max: 4
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
+RSpec/DescribeClass:
+  Enabled: false
+
+RSpec/ImplicitSubject:
+  Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 10
+
+Style/Documentation:
+  Enabled: false

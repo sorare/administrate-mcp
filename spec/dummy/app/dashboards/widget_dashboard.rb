@@ -12,7 +12,7 @@ class WidgetDashboard < Administrate::BaseDashboard
   }.freeze
 
   ATTRIBUTE_TYPES = {
-    id: Field::String,
+    id: Field::String.with_options(searchable: false),
     name: Field::String,
     slug: Field::String,
     status: Field::Select.with_options(collection: Widget.statuses.keys),

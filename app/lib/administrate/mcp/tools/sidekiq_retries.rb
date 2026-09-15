@@ -9,7 +9,7 @@ module Administrate
 
         tool_name 'sidekiq_retries'
         description 'Get the Sidekiq retry queue size and optionally the first page of retry entries ' \
-                      '(up to 25 jobs with class, error, retry count, and timestamps).'
+                    '(up to 25 jobs with class, error, retry count, and timestamps).'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: false
 
         input_schema(
@@ -30,7 +30,7 @@ module Administrate
           json_response(data)
         end
 
-        def self.serialize_entry(entry) # rubocop:disable Metrics/AbcSize
+        def self.serialize_entry(entry)
           {
             jid: entry.jid,
             queue: entry.queue,

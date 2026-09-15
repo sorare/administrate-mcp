@@ -40,7 +40,7 @@ module Administrate
 
           raise InvalidArgumentError,
                 "Unknown #{kind}: #{unknown.sort.join(', ')}. " \
-                  "Valid #{kind} for this resource: #{listed(allowed)}"
+                "Valid #{kind} for this resource: #{listed(allowed)}"
         end
 
         def reject_over_limit!(kind, size, max)

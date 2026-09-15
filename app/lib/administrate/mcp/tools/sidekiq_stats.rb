@@ -11,8 +11,8 @@ module Administrate
 
         tool_name 'sidekiq_stats'
         description 'Get per-job-class counts from the custom Sidekiq stats. ' \
-                      'Returns retry breakdown and optionally per-queue breakdowns. ' \
-                      'Each breakdown maps job class names to their pending count.'
+                    'Returns retry breakdown and optionally per-queue breakdowns. ' \
+                    'Each breakdown maps job class names to their pending count.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: false
 
         input_schema(

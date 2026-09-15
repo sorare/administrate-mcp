@@ -14,7 +14,7 @@ module Administrate
 
         tool_name 'admin_resource_show'
         description 'Show admin resource(s) by ID or slug. ' \
-                      'Accepts a single ID or an array of up to 10 IDs for batch lookup.'
+                    'Accepts a single ID or an array of up to 10 IDs for batch lookup.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
 
         input_schema(
@@ -23,11 +23,11 @@ module Administrate
               type: 'string',
               description:
                 'Resource type name (e.g., "card", "user", "player"). ' \
-                  'Use admin_resource_list_resources with no arguments to see available ones. ' \
-                  'Many resources are namespaced (e.g. "shop/order") and bare names are not aliased. ' \
-                  'An unrecognised name currently surfaces as an authorization error, not a "not found" ' \
-                  'error, so treat an auth failure here as a likely wrong resource name and re-check the ' \
-                  'catalog rather than assuming the server is unavailable.'
+                'Use admin_resource_list_resources with no arguments to see available ones. ' \
+                'Many resources are namespaced (e.g. "shop/order") and bare names are not aliased. ' \
+                'An unrecognised name currently surfaces as an authorization error, not a "not found" ' \
+                'error, so treat an auth failure here as a likely wrong resource name and re-check the ' \
+                'catalog rather than assuming the server is unavailable.'
             },
             id: {
               oneOf: [
@@ -40,11 +40,11 @@ module Administrate
                   maxItems: MAX_BATCH,
                   description:
                     "Multiple IDs (max #{MAX_BATCH}), as a real JSON array. A stringified array is read as one " \
-                      'id, matches nothing, and fails with "<Resource> not found for: [...]" echoing the whole ' \
-                      'list — that error means the ids never reached the batch path, not that they are wrong, ' \
-                      'so re-send them as an array rather than falling back to single calls. ' \
-                      'Attributes a dashboard computes per record are not resolved in batch mode and come back ' \
-                      'as "[error: could not serialize <field>]" — pass a single ID when you need one of those.'
+                    'id, matches nothing, and fails with "<Resource> not found for: [...]" echoing the whole ' \
+                    'list — that error means the ids never reached the batch path, not that they are wrong, ' \
+                    'so re-send them as an array rather than falling back to single calls. ' \
+                    'Attributes a dashboard computes per record are not resolved in batch mode and come back ' \
+                    'as "[error: could not serialize <field>]" — pass a single ID when you need one of those.'
                 }
               ]
             },
@@ -62,14 +62,14 @@ module Administrate
               },
               description:
                 'HasMany associations to expand inline instead of counts. Max 2 associations. An expanded ' \
-                  'association returns {count, items}: count is the association total, and items is capped at ' \
-                  '25 rows. Both ship in the same response, so always compare them — count > items.length ' \
-                  'means the list is clipped and items is NOT the full set. items also come back in no ' \
-                  'guaranteed order: the sort_by / direction declared on the dashboard attribute is not ' \
-                  'applied on this path, so a clipped expand is an arbitrary slice and not the newest rows — ' \
-                  'reading recency off it can report a year-old row as the latest one. There is no way to page ' \
-                  'past the cap or to sort here: when you need the remaining rows, or the most recent ones, ' \
-                  'list the related resource directly with a filter on this record and an explicit sort.'
+                'association returns {count, items}: count is the association total, and items is capped at ' \
+                '25 rows. Both ship in the same response, so always compare them — count > items.length ' \
+                'means the list is clipped and items is NOT the full set. items also come back in no ' \
+                'guaranteed order: the sort_by / direction declared on the dashboard attribute is not ' \
+                'applied on this path, so a clipped expand is an arbitrary slice and not the newest rows — ' \
+                'reading recency off it can report a year-old row as the latest one. There is no way to page ' \
+                'past the cap or to sort here: when you need the remaining rows, or the most recent ones, ' \
+                'list the related resource directly with a filter on this record and an explicit sort.'
             }
           },
           required: %w[resource id]
@@ -81,7 +81,7 @@ module Administrate
           attrs, expand_set =
             resolve_attributes_and_expansions(dashboard, fields, expand, :show_page_attributes, MAX_EXPAND)
 
-          return batch_show(entry, dashboard, id, attrs, expand_set, resource) if id.is_a?(Array)
+          return batch_show(entry, dashboard, id, resource, attributes: attrs, expand: expand_set) if id.is_a?(Array)
 
           record = find_record(entry, id)
           return error_response("#{resource.capitalize} not found for: #{id}") unless record
@@ -93,16 +93,16 @@ module Administrate
 
         # Getters stay unresolved here: they are per-record work, and a batch multiplies them by up
         # to MAX_BATCH. Read one id at a time when a getter-backed attribute matters.
-        def self.batch_show(entry, dashboard, ids, attrs, expand_set, resource)
+        def self.batch_show(entry, dashboard, ids, resource, attributes:, expand:)
           reject_over_limit!('ids', ids.size, MAX_BATCH)
-          columns = FieldSerializer.resolve_columns(dashboard, attrs)
+          columns = FieldSerializer.resolve_columns(dashboard, attributes)
 
           rows =
             ids.map do |single_id|
               record = find_record(entry, single_id)
               if record
                 [FieldSerializer.admin_url_for(record)] +
-                  FieldSerializer.serialize_row(record, dashboard, columns:, expand: expand_set)
+                  FieldSerializer.serialize_row(record, dashboard, columns:, expand:)
               else
                 { id: single_id, error: "#{resource.capitalize} not found" }
               end

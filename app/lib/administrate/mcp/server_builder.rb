@@ -8,7 +8,7 @@ module Administrate
         Administrate::MCP::Tools::AdminResourceList
         Administrate::MCP::Tools::AdminResourceShow
         Administrate::MCP::Tools::AdminResourceListResources
-        Administrate::MCP::Tools::ReportMCPImprovement
+        Administrate::MCP::Tools::ReportImprovement
       ].freeze
 
       SIDEKIQ_RETRIES_TOOL = 'Administrate::MCP::Tools::SidekiqRetries'

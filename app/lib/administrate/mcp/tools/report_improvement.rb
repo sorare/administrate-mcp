@@ -5,11 +5,11 @@ module Administrate
     module Tools
       # Lets MCP users report improvements (misleading descriptions, missing filters, etc.).
       # Open to every authenticated admin: reporting a bad description is not a privileged action.
-      class ReportMCPImprovement < BaseTool
+      class ReportImprovement < BaseTool
         tool_name 'report_mcp_improvement'
         requires_roles
         description 'Report an improvement for the MCP server (misleading description, missing filter, ' \
-                      'bad serialization, missing resource, etc.).'
+                    'bad serialization, missing resource, etc.).'
 
         input_schema(
           properties: {
@@ -31,7 +31,7 @@ module Administrate
         )
 
         def self.execute(admin:, category:, suggestion:, resource_name: nil)
-          result = ReportImprovement.call(admin:, category:, suggestion:, resource_name:)
+          result = Administrate::MCP::ReportImprovement.call(admin:, category:, suggestion:, resource_name:)
 
           return error_response(result.errors.join(', ')) unless result.success?
 

@@ -34,8 +34,7 @@ module Administrate
                        destructive: true, &invoke)
           raise ArgumentError, "#{name}: a block is required to invoke the action" unless invoke
 
-          normalized =
-            params.transform_values { |spec| spec.is_a?(String) ? { type: 'string', description: spec } : spec }
+          normalized = normalize_params(params)
 
           {
             name: name.to_sym,
@@ -47,6 +46,10 @@ module Administrate
             required: normalized.reject { |_, spec| spec[:required] == false }.keys,
             invoke:
           }
+        end
+
+        def normalize_params(params)
+          params.transform_values { |spec| spec.is_a?(String) ? { type: 'string', description: spec } : spec }
         end
 
         def definitions

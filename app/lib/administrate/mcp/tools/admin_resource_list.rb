@@ -14,7 +14,7 @@ module Administrate
 
         tool_name 'admin_resource_list'
         description 'Search and list admin resources. ' \
-                      'Supports text search, filters, sorting, field selection, and HasMany expansion.'
+                    'Supports text search, filters, sorting, field selection, and HasMany expansion.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
 
         input_schema(
@@ -23,24 +23,24 @@ module Administrate
               type: 'string',
               description:
                 'Resource type name (e.g., "card", "user", "player"). ' \
-                  'Use admin_resource_list_resources with no arguments to see available ones. ' \
-                  'Many resources are namespaced (e.g. "shop/order") and bare names are not aliased. ' \
-                  'An unrecognised name currently surfaces as an authorization error, not a "not found" ' \
-                  'error, so treat an auth failure here as a likely wrong resource name and re-check the ' \
-                  'catalog rather than assuming the server is unavailable.'
+                'Use admin_resource_list_resources with no arguments to see available ones. ' \
+                'Many resources are namespaced (e.g. "shop/order") and bare names are not aliased. ' \
+                'An unrecognised name currently surfaces as an authorization error, not a "not found" ' \
+                'error, so treat an auth failure here as a likely wrong resource name and re-check the ' \
+                'catalog rather than assuming the server is unavailable.'
             },
             query: {
               type: 'string',
               description:
                 'Search query (optional). Searches across searchable string fields ' \
-                  '(e.g., slug, display_name). Uses exact matching by default — ' \
-                  'use * as wildcard for partial matches (e.g., "*stellar*ligue*").'
+                '(e.g., slug, display_name). Uses exact matching by default — ' \
+                'use * as wildcard for partial matches (e.g., "*stellar*ligue*").'
             },
             filters: {
               type: 'object',
               description:
                 'Filters to apply (optional). Keys are filter names, values are filter arguments. ' \
-                  'Use admin_resource_list_resources to discover available filters per resource.'
+                'Use admin_resource_list_resources to discover available filters per resource.'
             },
             sort: {
               type: 'string',
@@ -65,14 +65,14 @@ module Administrate
               },
               description:
                 'HasMany associations to expand inline instead of counts. Max 2 associations. An expanded ' \
-                  'association returns {count, items}: count is the association total, and items is capped at ' \
-                  '25 rows. Both ship in the same response, so always compare them — count > items.length ' \
-                  'means the list is clipped and items is NOT the full set. items also come back in no ' \
-                  'guaranteed order: the sort_by / direction declared on the dashboard attribute is not ' \
-                  'applied on this path, so a clipped expand is an arbitrary slice and not the newest rows — ' \
-                  'reading recency off it can report a year-old row as the latest one. There is no way to page ' \
-                  'past the cap or to sort here: when you need the remaining rows, or the most recent ones, ' \
-                  'list the related resource directly with a filter on this record and an explicit sort.'
+                'association returns {count, items}: count is the association total, and items is capped at ' \
+                '25 rows. Both ship in the same response, so always compare them — count > items.length ' \
+                'means the list is clipped and items is NOT the full set. items also come back in no ' \
+                'guaranteed order: the sort_by / direction declared on the dashboard attribute is not ' \
+                'applied on this path, so a clipped expand is an arbitrary slice and not the newest rows — ' \
+                'reading recency off it can report a year-old row as the latest one. There is no way to page ' \
+                'past the cap or to sort here: when you need the remaining rows, or the most recent ones, ' \
+                'list the related resource directly with a filter on this record and an explicit sort.'
             },
             page: {
               type: 'number',
@@ -86,7 +86,7 @@ module Administrate
           required: %w[resource]
         )
 
-        # rubocop:disable-next Metrics/ParameterLists, Lint/UnusedMethodArgument
+        # rubocop:disable-next Lint/UnusedMethodArgument
         def self.execute(
           admin:,
           resource:,
@@ -150,7 +150,9 @@ module Administrate
 
           reject_unknown!('filters', filters.keys, dashboard_filters.keys.map(&:to_s) + valid_columns.to_a)
 
-          filters.each { |name, value| scope = apply_single_filter(scope, name, value, dashboard_filters, valid_columns) }
+          filters.each do |name, value|
+            scope = apply_single_filter(scope, name, value, dashboard_filters, valid_columns)
+          end
           scope
         end
 
