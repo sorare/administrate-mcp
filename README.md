@@ -116,6 +116,7 @@ class Configuration
                 :on_feedback,
                 :allow_localhost_redirects,
                 :api_key_token_prefix,
+                :default_client_name,
                 :sidekiq_stats_provider,
                 :admin_route_namespace,
                 :admin_url_options,
@@ -143,6 +144,7 @@ class Configuration
     @on_feedback = ->(feedback) {}
     @allow_localhost_redirects = true
     @api_key_token_prefix = 'amcp_'
+    @default_client_name = 'MCP Client'
     @sidekiq_stats_provider = nil
   end
 
@@ -183,7 +185,8 @@ end
 | `on_feedback` | no-op | Called with each new `Feedback` record |
 | `allow_localhost_redirects` | `true` | Whether loopback OAuth redirect URIs are accepted |
 | `api_key_token_prefix` | `'amcp_'` | Prefix that marks a bearer token as an API key |
-| `sidekiq_stats_provider` | `nil` | Object answering `counts`, `total_counts`, `queues`, `stats_cleared_at` |
+| `default_client_name` | `'MCP Client'` | Name given to a dynamically registered client that sends no `client_name` |
+| `sidekiq_stats_provider` | `nil` | Object answering `counts`, `total_counts`, `queues`, `stats_cleared_at`; a class name String or a Proc is resolved lazily so autoloaded providers can be named in an initializer |
 | `admin_route_namespace` | `:admin` | Namespace used to build record URLs |
 | `admin_url_options` | `{}` | Options passed to `polymorphic_url` |
 | `skipped_field_classes` | Password | Field class names never serialized |

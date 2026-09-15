@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateAdministrateMcpOauthTables < ActiveRecord::Migration[8.1]
+class CreateAdministrateModelContextProtocolAuthorizationTables < ActiveRecord::Migration[8.1]
   def change
     create_table :administrate_mcp_oauth_applications, id: :uuid, if_not_exists: true do |t|
       t.string :client_id, null: false

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateAdministrateMcpApiKeys < ActiveRecord::Migration[8.1]
+class CreateAdministrateModelContextProtocolApiKeys < ActiveRecord::Migration[8.1]
   def change
     create_table :administrate_mcp_api_keys, id: :uuid, if_not_exists: true do |t|
       t.uuid :admin_id, null: false

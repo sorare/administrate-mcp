@@ -29,7 +29,12 @@ module Administrate
         )
 
         def self.provider
-          Administrate::MCP.config.sidekiq_stats_provider
+          configured = Administrate::MCP.config.sidekiq_stats_provider
+          case configured
+          when String then configured.constantize
+          when Proc then configured.call
+          else configured
+          end
         end
 
         def self.retry_queue

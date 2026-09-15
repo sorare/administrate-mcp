@@ -88,7 +88,7 @@ module Administrate
       def build_application
         OAuthApplication.new(
           client_id: OAuthApplication.generate_client_id,
-          name: register_params[:client_name] || 'MCP Client',
+          name: register_params[:client_name] || Administrate::MCP.config.default_client_name,
           redirect_uris: register_params[:redirect_uris] || []
         )
       end

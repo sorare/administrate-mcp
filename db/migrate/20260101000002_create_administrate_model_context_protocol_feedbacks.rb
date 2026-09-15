@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class CreateAdministrateMcpFeedbacks < ActiveRecord::Migration[8.1]
+class CreateAdministrateModelContextProtocolFeedbacks < ActiveRecord::Migration[8.1]
   def change
     create_table :administrate_mcp_feedbacks, id: :uuid, if_not_exists: true do |t|
       t.uuid :admin_id

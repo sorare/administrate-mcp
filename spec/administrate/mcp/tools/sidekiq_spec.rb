@@ -37,6 +37,23 @@ RSpec.describe 'the Sidekiq tools' do
 
     before { Administrate::MCP.config.sidekiq_stats_provider = provider }
 
+    context 'when the provider is configured indirectly' do
+      after { Administrate::MCP.config.sidekiq_stats_provider = provider }
+
+      it 'resolves a class name lazily' do
+        stub_const('HostStatsProvider', provider)
+        Administrate::MCP.config.sidekiq_stats_provider = 'HostStatsProvider'
+
+        expect(described_class.provider).to eq(provider)
+      end
+
+      it 'calls a proc' do
+        Administrate::MCP.config.sidekiq_stats_provider = -> { provider }
+
+        expect(described_class.provider).to eq(provider)
+      end
+    end
+
     it 'returns the retry breakdown sorted by count' do
       data = JSON.parse(described_class.call(server_context:).content.first[:text])
 

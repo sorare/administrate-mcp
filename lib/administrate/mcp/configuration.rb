@@ -49,6 +49,7 @@ module Administrate
                     :on_tool_call,
                     :on_feedback,
                     :allow_localhost_redirects,
+                    :default_client_name,
                     :api_key_token_prefix,
                     :sidekiq_stats_provider,
                     :admin_route_namespace,
@@ -83,6 +84,7 @@ module Administrate
         @on_feedback = ->(feedback) {}
         @allow_localhost_redirects = true
         @api_key_token_prefix = 'amcp_'
+        @default_client_name = 'MCP Client'
         @sidekiq_stats_provider = nil
       end
 

@@ -50,6 +50,17 @@ RSpec.describe Administrate::MCP::OAuthController do
       expect(data['redirect_uris']).to eq(['http://localhost:8080/callback'])
     end
 
+    context 'without a client_name' do
+      before { Administrate::MCP.config.default_client_name = 'House Client' }
+      after { Administrate::MCP.config.default_client_name = 'MCP Client' }
+
+      it 'uses the configured default client name' do
+        register(redirect_uris: ['http://localhost:8080/callback'])
+
+        expect(response.parsed_body['client_name']).to eq('House Client')
+      end
+    end
+
     it 'rejects a registration without redirect_uris' do
       register(client_name: 'My Client')
 
