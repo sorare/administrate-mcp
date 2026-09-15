@@ -53,8 +53,10 @@ Administrate::MCP.configure do |c|
     controller.redirect_to(controller.main_app.new_administrator_session_path)
   end
 
-  c.issuer = ->(request) { request.subdomain == 'admin-mcp' ? request.base_url : 'https://admin-mcp.acme.com' }
-  c.admin_origin = ->(request) { request.subdomain == 'admin' ? request.base_url : 'https://admin.acme.com' }
+  # These procs are also called without a request, when the engine builds a record URL outside a
+  # request cycle, so guard the dereference.
+  c.issuer = ->(request) { request&.subdomain == 'admin-mcp' ? request.base_url : 'https://admin-mcp.acme.com' }
+  c.admin_origin = ->(request) { request&.subdomain == 'admin' ? request.base_url : 'https://admin.acme.com' }
   c.admin_url_options = { subdomain: 'admin' }
 
   c.authorization = Administrate::MCP::Authorization::Pundit.new

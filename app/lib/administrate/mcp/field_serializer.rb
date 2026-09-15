@@ -69,6 +69,9 @@ module Administrate
           )
         end
 
+        # A host may declare `admin_origin` as a proc that reads the request, and there is no request
+        # here. Falling back to the configured options keeps the URL buildable from
+        # default_url_options instead of losing every `url` to a nil.
         def admin_url_options(config)
           options = config.admin_url_options
           return options if options[:host].present?
@@ -77,6 +80,8 @@ module Administrate
           return options if origin.host.blank?
 
           { host: origin.host, protocol: origin.scheme, port: origin.port }.compact.merge(options)
+        rescue StandardError
+          options
         end
 
         def exposed_attributes(dashboard, attributes = nil)

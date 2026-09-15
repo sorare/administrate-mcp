@@ -151,6 +151,26 @@ RSpec.describe Administrate::MCP::FieldSerializer do
     it 'returns nil for non-AR records' do
       expect(described_class.admin_url_for(Object.new)).to be_nil
     end
+
+    context 'when admin_origin is a proc that reads the request' do
+      around do |example|
+        previous = Rails.application.routes.default_url_options
+        Rails.application.routes.default_url_options = { host: 'fallback.example.com', protocol: 'https' }
+        example.run
+        Rails.application.routes.default_url_options = previous
+      end
+
+      before do
+        Administrate::MCP.config.admin_url_options = {}
+        Administrate::MCP.config.admin_origin = ->(request) { "https://#{request.subdomain}.example.com" }
+      end
+
+      it 'still builds the url from default_url_options rather than losing it' do
+        expect(described_class.admin_url_for(widget)).to eq(
+          "https://fallback.example.com/admin/widgets/#{widget.to_param}"
+        )
+      end
+    end
   end
 
   describe '.resolve_columns' do
