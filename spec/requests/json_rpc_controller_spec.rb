@@ -103,6 +103,20 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       end
     end
 
+    context 'with a revoked OAuth access token' do
+      let(:oauth_token) { create(:administrate_mcp_oauth_access_token, admin:, revoked_at: Time.current) }
+
+      it 'returns 401 with X-Auth-Error: oauth' do
+        post '/',
+             params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
+             headers: headers.merge('Authorization' => "Bearer #{oauth_token.token}")
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(response.headers['X-Auth-Error']).to eq('oauth')
+        expect(response.parsed_body.dig('error', 'message')).to eq('Token has been revoked')
+      end
+    end
+
     context 'with a revoked API key' do
       before { api_key.revoke! }
 
@@ -237,6 +251,117 @@ RSpec.describe Administrate::MCP::JsonRpcController do
         result = response.parsed_body['result']
         expect(result['protocolVersion']).to eq('2025-06-18')
         expect(result.dig('serverInfo', 'name')).to eq('dummy_admin')
+      end
+    end
+  end
+
+  describe 'POST / on the 2026-07-28 modern lifecycle' do
+    let(:protocol_version) { '2026-07-28' }
+    let(:rpc_method) { 'tools/list' }
+    let(:rpc_id) { 1 }
+    let(:rpc_params) { {} }
+    let(:tool_name) { nil }
+    let(:method_header) { rpc_method }
+    let(:envelope) do
+      {
+        'io.modelcontextprotocol/protocolVersion' => protocol_version,
+        'io.modelcontextprotocol/clientInfo' => {
+          name: 'rspec',
+          version: '1.0'
+        },
+        'io.modelcontextprotocol/clientCapabilities' => {}
+      }
+    end
+    let(:modern_headers) do
+      headers.merge(
+        'MCP-Protocol-Version' => protocol_version,
+        'Mcp-Method' => method_header,
+        'Mcp-Name' => tool_name
+      ).compact
+    end
+    let(:body) { { jsonrpc: '2.0', method: rpc_method, id: rpc_id, params: rpc_params.merge(_meta: envelope) }.to_json }
+
+    context 'with server/discover' do
+      let(:rpc_method) { 'server/discover' }
+
+      it 'advertises the modern version, the tools capability and the server identity' do
+        post '/', params: body, headers: modern_headers
+
+        expect(response).to have_http_status(:ok)
+        result = response.parsed_body['result']
+        expect(result['resultType']).to eq('complete')
+        expect(result['supportedVersions']).to eq([protocol_version])
+        expect(result['capabilities']).to have_key('tools')
+        expect(result.dig('_meta', 'io.modelcontextprotocol/serverInfo', 'name')).to eq('dummy_admin')
+      end
+    end
+
+    context 'with tools/list' do
+      it 'returns the result discriminator and the cache hints' do
+        post '/', params: body, headers: modern_headers
+
+        expect(response).to have_http_status(:ok)
+        result = response.parsed_body['result']
+        expect(result['resultType']).to eq('complete')
+        expect(result['ttlMs']).to eq(0)
+        expect(result['cacheScope']).to eq('private')
+        expect(result['tools'].pluck('name')).to include('admin_resource_show')
+      end
+
+      it 'returns the tools in the same order on every call' do
+        post '/', params: body, headers: modern_headers
+        first_call = response.parsed_body.dig('result', 'tools').pluck('name')
+
+        post '/', params: body, headers: modern_headers
+
+        expect(response.parsed_body.dig('result', 'tools').pluck('name')).to eq(first_call)
+      end
+    end
+
+    context 'with tools/call' do
+      let(:rpc_method) { 'tools/call' }
+      let(:tool_name) { 'report_mcp_improvement' }
+      let(:rpc_params) do
+        { name: tool_name, arguments: { category: 'description', suggestion: 'Misleading description on widgets' } }
+      end
+
+      it 'runs the tool' do
+        expect { post('/', params: body, headers: modern_headers) }
+          .to change(Administrate::MCP::Feedback, :count).by(1)
+
+        expect(response).to have_http_status(:ok)
+        result = response.parsed_body['result']
+        expect(result['resultType']).to eq('complete')
+        expect(JSON.parse(result.dig('content', 0, 'text'))['status']).to eq('created')
+      end
+    end
+
+    context 'without the Mcp-Method header' do
+      let(:method_header) { nil }
+
+      it 'returns 400 with error code -32020' do
+        post '/', params: body, headers: modern_headers
+
+        expect(response).to have_http_status(:bad_request)
+        expect(response.parsed_body.dig('error', 'code')).to eq(-32_020)
+        expect(response.parsed_body.dig('error', 'message')).to include('Mcp-Method header is required')
+      end
+    end
+
+    context 'with a tool call the admin is not authorized for' do
+      let(:rpc_method) { 'tools/call' }
+      let(:rpc_id) { 5 }
+      let(:tool_name) { 'admin_resource_list' }
+      let(:rpc_params) { { name: tool_name, arguments: { resource: 'nonexistent_resource' } } }
+
+      it 'returns 403 with X-Auth-Error: forbidden and error code -32003' do
+        post '/', params: body, headers: modern_headers
+
+        expect(response).to have_http_status(:forbidden)
+        expect(response.headers['X-Auth-Error']).to eq('forbidden')
+        expect(response.parsed_body.dig('error', 'code')).to eq(-32_003)
+        expect(response.parsed_body.dig('error', 'message')).to include('Unknown resource')
+        expect(response.parsed_body['id']).to eq(5)
       end
     end
   end

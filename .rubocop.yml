@@ -68,7 +68,7 @@ RSpec/ImplicitSubject:
   Enabled: false
 
 RSpec/MultipleMemoizedHelpers:
-  Max: 10
+  Max: 13
 
 Style/Documentation:
   Enabled: false
