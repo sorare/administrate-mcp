@@ -50,13 +50,14 @@ module Administrate
                     :on_feedback,
                     :allow_localhost_redirects,
                     :default_client_name,
-                    :api_key_token_prefix,
                     :sidekiq_stats_provider,
                     :admin_route_namespace,
                     :admin_url_options,
                     :skipped_field_classes,
                     :has_many_field_classes,
                     :field_serializers
+
+      attr_reader :api_key_token_prefix
 
       def initialize
         assign_identity
@@ -94,6 +95,14 @@ module Administrate
         @skipped_field_classes = SKIPPED_FIELD_CLASSES.dup
         @has_many_field_classes = HAS_MANY_FIELD_CLASSES.dup
         @field_serializers = FIELD_SERIALIZERS.dup
+      end
+
+      # The prefix is what tells a bearer token apart from an OAuth token, so a blank one would send
+      # every OAuth token down the API key path.
+      def api_key_token_prefix=(prefix)
+        raise ArgumentError, 'api_key_token_prefix cannot be blank' if prefix.blank?
+
+        @api_key_token_prefix = prefix.to_s
       end
 
       def register_field(class_name, as: nil, &serializer)

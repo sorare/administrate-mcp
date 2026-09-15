@@ -186,7 +186,7 @@ end
 | `on_tool_call` | no-op | Audit hook `(tool_name:, admin:, arguments:, scopes:)`, after the permission checks |
 | `on_feedback` | no-op | Called with each new `Feedback` record |
 | `allow_localhost_redirects` | `true` | Whether loopback OAuth redirect URIs are accepted |
-| `api_key_token_prefix` | `'amcp_'` | Prefix that marks a bearer token as an API key |
+| `api_key_token_prefix` | `'amcp_'` | Prefix that marks a bearer token as an API key. Cannot be blank |
 | `default_client_name` | `'MCP Client'` | Name given to a dynamically registered client that sends no `client_name` |
 | `sidekiq_stats_provider` | `nil` | Object answering `counts`, `total_counts`, `queues`, `stats_cleared_at`; a class name String or a Proc is resolved lazily so autoloaded providers can be named in an initializer |
 | `admin_route_namespace` | `:admin` | Namespace used to build record URLs |
@@ -307,6 +307,11 @@ Administrate::MCP::ApiKey.create!(admin:, name: 'Laptop', token_digest: Administ
 ```
 
 Only the digest is stored. Keys are read-only unless `write_access` is set.
+
+If you are migrating keys that were issued before you adopted this gem, set `api_key_token_prefix`
+to the prefix those keys already carry. The plaintext is not recoverable — only its digest and the
+first 13 characters are stored in `token_prefix` — so a changed prefix makes every existing key stop
+matching, and the holders have to be issued new ones.
 
 **OAuth 2.1.** Clients register themselves, send the user to the consent screen on the admin origin,
 and exchange the code with PKCE. Access tokens last a week, authorization codes ten minutes, and
