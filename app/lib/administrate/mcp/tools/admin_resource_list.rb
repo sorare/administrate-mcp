@@ -183,7 +183,7 @@ module Administrate
         def self.apply_sort(scope, dashboard, sort, direction)
           return scope if sort.blank?
 
-          reject_unknown!('sort fields', sort, dashboard.show_page_attributes)
+          reject_unknown!('sort fields', sort, FieldSerializer.exposed_attributes(dashboard))
 
           safe_direction = direction.to_s == 'asc' ? :asc : :desc
           scope.order(sort.to_sym => safe_direction)

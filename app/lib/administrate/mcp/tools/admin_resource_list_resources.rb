@@ -57,7 +57,7 @@ module Administrate
 
         def self.build_detail(name, entry)
           dashboard = entry.dashboard_class.new
-          result = { name:, fields: dashboard.show_page_attributes.map(&:to_s) }
+          result = { name:, fields: FieldSerializer.exposed_attributes(dashboard).map(&:to_s) }
           result[:description] = entry.description if entry.description.present?
           enrich_detail!(result, entry, dashboard)
           result

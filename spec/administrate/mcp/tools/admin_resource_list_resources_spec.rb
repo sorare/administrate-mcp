@@ -39,6 +39,17 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceListResources do
         )
       end
 
+      context 'with MCP_SKIPPED_ATTRIBUTES' do
+        before { stub_const('WidgetDashboard::MCP_SKIPPED_ATTRIBUTES', %i[slug]) }
+
+        it 'does not advertise the skipped attribute' do
+          fields = call(resource: 'widget')['fields']
+
+          expect(fields).to include('id', 'name')
+          expect(fields).not_to include('slug')
+        end
+      end
+
       it 'rejects an unknown resource' do
         result = described_class.call(server_context:, resource: 'nonexistent')
 

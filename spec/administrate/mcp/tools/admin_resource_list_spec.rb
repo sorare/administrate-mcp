@@ -92,6 +92,14 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceList do
         expect(names).to eq(names.sort)
       end
 
+      it 'rejects a sort on an attribute MCP_SKIPPED_ATTRIBUTES hides' do
+        stub_const('WidgetDashboard::MCP_SKIPPED_ATTRIBUTES', %i[slug])
+
+        result = described_class.call(server_context:, resource: 'widget', sort: 'slug')
+
+        expect(result.content.first[:text]).to include('Unknown sort fields: slug')
+      end
+
       it 'rejects an unknown sort field' do
         result = described_class.call(server_context:, resource: 'widget', sort: 'nope')
 
