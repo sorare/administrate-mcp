@@ -38,7 +38,7 @@ module Administrate
         end
 
         def self.retry_queue
-          provider.const_defined?(:RETRY_QUEUE) ? provider.const_get(:RETRY_QUEUE) : RETRY_QUEUE
+          provider.const_defined?(:RETRY_QUEUE, false) ? provider.const_get(:RETRY_QUEUE, false) : RETRY_QUEUE
         end
 
         def self.execute(admin:, include_queues: false, queue_name: nil) # rubocop:disable Lint/UnusedMethodArgument

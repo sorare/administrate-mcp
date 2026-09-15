@@ -92,10 +92,10 @@ module Administrate
         end
 
         def self.dashboard_defined_filters(dashboard_class)
-          return [] unless dashboard_class.const_defined?(:COLLECTION_FILTERS)
+          return [] unless dashboard_class.const_defined?(:COLLECTION_FILTERS, false)
 
           dashboard_class
-            .const_get(:COLLECTION_FILTERS)
+            .const_get(:COLLECTION_FILTERS, false)
             .map do |name, filter|
               type = filter.arity == 1 ? 'boolean' : 'value'
               { name: name.to_s, type: }

@@ -90,8 +90,11 @@ module Administrate
           Administrate::MCP.config.dashboard_directories
         end
 
+        # `inherit: false`: a constant of the same name defined at the top level of the host would
+        # otherwise be found on every dashboard, and a stray MCP_EXPOSED = false would empty the
+        # registry. A dashboard that wants one has to declare it itself.
         def dashboard_constant(dashboard_class, name)
-          dashboard_class.const_defined?(name) ? dashboard_class.const_get(name) : nil
+          dashboard_class.const_defined?(name, false) ? dashboard_class.const_get(name, false) : nil
         end
       end
     end

@@ -168,9 +168,9 @@ module Administrate
         end
 
         def self.dashboard_collection_filters(dashboard_class)
-          return {} unless dashboard_class.const_defined?(:COLLECTION_FILTERS)
+          return {} unless dashboard_class.const_defined?(:COLLECTION_FILTERS, false)
 
-          dashboard_class.const_get(:COLLECTION_FILTERS)
+          dashboard_class.const_get(:COLLECTION_FILTERS, false)
         end
 
         def self.apply_search(scope, dashboard, query)

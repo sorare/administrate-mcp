@@ -38,6 +38,23 @@ RSpec.describe Administrate::MCP::DashboardRegistry do
     end
   end
 
+  describe 'constants defined at the top level of the host' do
+    before do
+      stub_const('MCP_DESCRIPTION', 'a stray host constant')
+      stub_const('MCP_EXPOSED', false)
+      stub_const('MCP_BASE_SCOPE', -> { Gadget.none })
+      described_class.reset!
+    end
+
+    it 'does not read them off every dashboard' do
+      entry = described_class.find('gadget')
+
+      expect(entry).to be_present
+      expect(entry.description).to eq(GadgetDashboard::MCP_DESCRIPTION)
+      expect(entry.base_scope).to be_nil
+    end
+  end
+
   describe '.resource_names' do
     it 'returns a sorted array of resource names' do
       names = described_class.resource_names

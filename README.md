@@ -289,6 +289,10 @@ class OrderDashboard < Administrate::BaseDashboard
 end
 ```
 
+Every `MCP_` constant and `COLLECTION_FILTERS` is read off the dashboard itself, never inherited, so
+a constant of the same name defined at the top level of your application — or on a shared dashboard
+base class — is not applied to every resource. A subclass that wants one declares it.
+
 - `MCP_DESCRIPTION` tells the client what the resource is.
 - `MCP_SKIPPED_ATTRIBUTES = %i[email]` keeps attributes visible in the admin UI but out of MCP
   reads, listings and field selection.
