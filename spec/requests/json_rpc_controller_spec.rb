@@ -117,6 +117,29 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       end
     end
 
+    context 'when the host reports the admin as no longer active' do
+      before { Administrate::MCP.config.admin_active = ->(_admin) { false } }
+
+      it 'returns 401 with X-Auth-Error: inactive_admin for an API key' do
+        post '/', params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json, headers: headers
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(response.headers['X-Auth-Error']).to eq('inactive_admin')
+        expect(response.parsed_body.dig('error', 'code')).to eq(-32_001)
+      end
+
+      it 'returns 401 with X-Auth-Error: inactive_admin for an OAuth token' do
+        oauth_token = create(:administrate_mcp_oauth_access_token, admin:)
+
+        post '/',
+             params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
+             headers: headers.merge('Authorization' => "Bearer #{oauth_token.token}")
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(response.headers['X-Auth-Error']).to eq('inactive_admin')
+      end
+    end
+
     context 'with a revoked API key' do
       before { api_key.revoke! }
 

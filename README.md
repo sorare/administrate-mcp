@@ -48,6 +48,7 @@ Administrate::MCP.configure do |c|
 
   c.admin_class_name = 'Administrator'
   c.current_admin = ->(controller) { controller.send(:warden)&.authenticate(scope: :administrator) }
+  c.admin_active = ->(admin) { admin.admin? && admin.anonymized_at.nil? }
   c.sign_in = lambda do |controller|
     controller.send(:store_location_for, :administrator, controller.request.fullpath)
     controller.redirect_to(controller.main_app.new_administrator_session_path)
@@ -107,6 +108,7 @@ class Configuration
                 :issuer,
                 :admin_origin,
                 :current_admin,
+                :admin_active,
                 :sign_in,
                 :admin_class_name,
                 :authorization,
@@ -133,6 +135,7 @@ class Configuration
     @issuer = nil
     @admin_origin = nil
     @current_admin = ->(_controller) {}
+    @admin_active = ->(_admin) { true }
     @sign_in = nil
     @admin_class_name = 'Administrator'
     @authorization = default_authorization
@@ -178,6 +181,7 @@ end
 | `issuer` | `nil` | MCP origin. String or a proc taking the request |
 | `admin_origin` | `nil` | Admin origin, where the consent screen lives. String or proc |
 | `current_admin` | returns `nil` | Proc taking the OAuth controller, returning the signed-in admin |
+| `admin_active` | `true` | Proc taking the authenticated admin. Return false and the call is refused with 401 `inactive_admin`, so a credential does not outlive the person's admin status |
 | `sign_in` | `nil` (renders 401) | Proc taking the OAuth controller, sending an anonymous visitor to sign in |
 | `admin_class_name` | `'Administrator'` | Class the `admin_id` column points at |
 | `authorization` | Pundit if defined, else Permissive | Adapter: `authorize!`, `authorized?`, `authorize_roles!` |
@@ -319,6 +323,11 @@ matching, and the holders have to be issued new ones.
 **OAuth 2.1.** Clients register themselves, send the user to the consent screen on the admin origin,
 and exchange the code with PKCE. Access tokens last a week, authorization codes ten minutes, and
 refreshing revokes the old token.
+
+A credential outlives the admin who holds it: revoking someone's admin role, deactivating or
+anonymizing their account does nothing to a key or token they were already issued, and a tool such as
+`sidekiq_retries` never consults the authorization adapter. Set `admin_active` so every call
+re-checks the person, not just the credential.
 
 The JSON-RPC endpoint authenticates by bearer token only and never reads the session cookie: hosts
 routinely share a session across sibling subdomains, and a browser signed into the admin UI must not

@@ -39,6 +39,7 @@ module Administrate
                     :issuer,
                     :admin_origin,
                     :current_admin,
+                    :admin_active,
                     :sign_in,
                     :admin_class_name,
                     :authorization,
@@ -72,6 +73,7 @@ module Administrate
         @issuer = nil
         @admin_origin = nil
         @current_admin = ->(_controller) {}
+        @admin_active = ->(_admin) { true }
         @sign_in = nil
         @admin_class_name = 'Administrator'
         @authorization = default_authorization

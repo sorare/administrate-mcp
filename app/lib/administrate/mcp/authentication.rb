@@ -9,6 +9,7 @@ module Administrate
       OAUTH_ERROR_CODE = -32_001
       API_KEY_ERROR_CODE = -32_001
       MISSING_TOKEN_ERROR_CODE = -32_001
+      INACTIVE_ADMIN_ERROR_CODE = -32_001
 
       # Authenticated caller: the admin plus the scopes their credential carries. API keys are
       # read-only unless granted write access; OAuth tokens carry the scopes they were granted.
@@ -47,6 +48,18 @@ module Administrate
         end
       end
 
+      # Raised when the credential is still valid but its owner no longer is. A credential outlives
+      # the admin who holds it, so the host is asked on every call.
+      class InactiveAdminError < Error
+        def auth_error_type
+          'inactive_admin'
+        end
+
+        def jsonrpc_error_code
+          INACTIVE_ADMIN_ERROR_CODE
+        end
+      end
+
       class << self
         def authenticate!(request)
           token = extract_bearer_token(request)
@@ -56,13 +69,19 @@ module Administrate
             api_key = ApiKey.authenticate(token)
             raise InvalidApiKeyError, 'Invalid or revoked API key' if api_key.nil?
 
-            return Identity.new(admin: api_key.admin, scopes: api_key.scopes)
+            return active!(Identity.new(admin: api_key.admin, scopes: api_key.scopes))
           end
 
-          authenticate_oauth_token!(token)
+          active!(authenticate_oauth_token!(token))
         end
 
         private
+
+        def active!(identity)
+          return identity if Administrate::MCP.config.admin_active.call(identity.admin)
+
+          raise InactiveAdminError, 'Admin is no longer active'
+        end
 
         def authenticate_oauth_token!(token)
           oauth_token = OAuthAccessToken.find_by(token:)

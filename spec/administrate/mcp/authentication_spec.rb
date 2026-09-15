@@ -33,6 +33,30 @@ RSpec.describe Administrate::MCP::Authentication do
       end
     end
 
+    context 'when the host reports the admin as no longer active' do
+      before { Administrate::MCP.config.admin_active = ->(_admin) { false } }
+
+      context 'with an API key' do
+        let(:headers) { { 'Authorization' => "Bearer #{token}" } }
+
+        it 'raises an InactiveAdminError' do
+          expect { described_class.authenticate!(request) }.to raise_error(
+            described_class::InactiveAdminError,
+            'Admin is no longer active'
+          )
+        end
+      end
+
+      context 'with an OAuth access token' do
+        let(:oauth_token) { create(:administrate_mcp_oauth_access_token, admin:) }
+        let(:headers) { { 'Authorization' => "Bearer #{oauth_token.token}" } }
+
+        it 'raises an InactiveAdminError' do
+          expect { described_class.authenticate!(request) }.to raise_error(described_class::InactiveAdminError)
+        end
+      end
+    end
+
     context 'with no authorization header' do
       let(:headers) { {} }
 
