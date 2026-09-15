@@ -143,11 +143,10 @@ module Administrate
 
       def validated_redirect_uri!(application)
         uri = params[:redirect_uri]
-        render(plain: 'Invalid redirect_uri', status: :bad_request) unless oauth_service.valid_redirect_uri?(
-          application,
-          uri
-        )
-        uri
+        return uri if oauth_service.valid_redirect_uri?(application, uri)
+
+        render(plain: 'Invalid redirect_uri', status: :bad_request)
+        nil
       end
 
       def encoded_state

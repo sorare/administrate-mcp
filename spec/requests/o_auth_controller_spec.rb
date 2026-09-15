@@ -269,6 +269,21 @@ RSpec.describe Administrate::MCP::OAuthController do
       expect(response.location).to start_with('http://[::1]:8080/cb?code=')
     end
 
+    it 'refuses an unregistered redirect_uri without issuing a grant' do
+      expect do
+        post '/mcp/oauth/authorize',
+             params: {
+               client_id: application.client_id,
+               redirect_uri: 'https://evil.com/callback',
+               code_challenge: valid_code_challenge
+             },
+             headers: signed_in
+      end.not_to change(Administrate::MCP::OAuthAccessGrant, :count)
+
+      expect(response).to have_http_status(:bad_request)
+      expect(response.body).to eq('Invalid redirect_uri')
+    end
+
     it 'redirects with an error when denied' do
       post '/mcp/oauth/authorize',
            params: {
