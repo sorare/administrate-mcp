@@ -284,6 +284,35 @@ RSpec.describe Administrate::MCP::OAuthController do
       expect(response.body).to eq('Invalid redirect_uri')
     end
 
+    context 'with forgery protection on, as in production' do
+      around do |example|
+        previous = ActionController::Base.allow_forgery_protection
+        ActionController::Base.allow_forgery_protection = true
+        example.run
+        ActionController::Base.allow_forgery_protection = previous
+      end
+
+      it 'refuses a token-less approval' do
+        expect do
+          post '/mcp/oauth/authorize',
+               params: {
+                 client_id: application.client_id,
+                 redirect_uri: application.redirect_uris.first,
+                 code_challenge: valid_code_challenge
+               },
+               headers: signed_in
+        end.to raise_error(ActionController::InvalidAuthenticityToken)
+      end
+
+      it 'still serves the token endpoint, which skips forgery protection' do
+        host! 'admin-mcp.example.com'
+
+        post '/oauth/token', params: { grant_type: 'client_credentials' }
+
+        expect(response).to have_http_status(:bad_request)
+      end
+    end
+
     it 'redirects with an error when denied' do
       post '/mcp/oauth/authorize',
            params: {
