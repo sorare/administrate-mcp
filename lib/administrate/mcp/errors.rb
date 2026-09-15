@@ -9,6 +9,10 @@ module Administrate
     class UnauthorizedError < Error
     end
 
+    # Raised when the host asked for something the configuration cannot deliver.
+    class ConfigurationError < Error
+    end
+
     # Raised when the caller passes an argument the resource cannot honour. Surfaced verbatim so the
     # caller can correct the call, rather than as an "Internal error".
     class InvalidArgumentError < Error

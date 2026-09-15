@@ -5,8 +5,8 @@ require 'administrate/mcp/errors'
 module Administrate
   module MCP
     module Authorization
-      # Shared role gating. Roles are a host concept: an admin that does not answer `can_access?`
-      # is never refused on role grounds.
+      # Shared role gating. Roles are a host concept: an admin class that does not answer
+      # `can_access?` cannot be gated on them, and saying so beats letting the call through.
       class Base
         def authorize!(admin, record_or_class, action)
           return if authorized?(admin, record_or_class, action)
@@ -20,7 +20,15 @@ module Administrate
 
         def authorize_roles!(admin, roles)
           return if roles.blank?
-          return unless admin.respond_to?(:can_access?)
+
+          unless admin.respond_to?(:can_access?)
+            raise ConfigurationError,
+                  "#{admin.class.name} does not respond to can_access?, so the required roles " \
+                  "#{roles.join(', ')} cannot be checked. Give the admin class a can_access?(*roles) " \
+                  'method, clear default_required_roles, or override authorize_roles! on the ' \
+                  'authorization adapter.'
+          end
+
           return if admin.can_access?(*roles)
 
           raise UnauthorizedError, "Insufficient permissions. Required roles: #{roles.join(', ')}"

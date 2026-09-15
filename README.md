@@ -201,9 +201,10 @@ end
 runs the policy for the resource exactly as the Administrate UI does — `index?` to list, `show?` to
 read, and the action's own predicate for a write action.
 
-Both inherit `authorize_roles!` from `Authorization::Base`: when the admin answers `can_access?`, a
-tool's `requires_roles` is checked against it; an admin that does not answer `can_access?` is never
-refused on role grounds.
+Both inherit `authorize_roles!` from `Authorization::Base`: a tool's `requires_roles` (or
+`default_required_roles`) is checked with `admin.can_access?(*roles)`. An admin class that does not
+answer `can_access?` raises `Administrate::MCP::ConfigurationError` rather than letting the call
+through — clear `default_required_roles`, give the class the method, or override `authorize_roles!`.
 
 Write your own by answering three methods:
 

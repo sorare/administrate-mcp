@@ -20,8 +20,15 @@ RSpec.describe 'authorization adapters' do
       )
     end
 
-    it 'skips the role check for an admin that does not answer can_access?' do
-      expect { adapter.authorize_roles!(Object.new, [:nope]) }.not_to raise_error
+    it 'ignores roles when none are required' do
+      expect { adapter.authorize_roles!(Object.new, []) }.not_to raise_error
+    end
+
+    it 'reports a misconfiguration when the admin cannot answer can_access?' do
+      expect { adapter.authorize_roles!(Object.new, %i[nope]) }.to raise_error(
+        Administrate::MCP::ConfigurationError,
+        /does not respond to can_access\?/
+      )
     end
   end
 
