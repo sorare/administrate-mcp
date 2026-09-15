@@ -36,6 +36,9 @@ The tables are `administrate_mcp_api_keys`, `administrate_mcp_feedbacks`,
 `administrate_mcp_oauth_access_tokens`. They use uuid primary keys and a uuid `admin_id` column
 that is indexed but carries no foreign key constraint, so the engine works with any admin table.
 
+PostgreSQL is required. The migrations create uuid primary keys defaulted with `gen_random_uuid()`
+and store the OAuth `redirect_uris` and `grant_types` as array columns.
+
 ## Configuration
 
 Configure in an initializer — `config/initializers/administrate_mcp.rb`. It must run before the
@@ -167,7 +170,6 @@ class Configuration
   def skip_field(*class_names); end
   def register_has_many_field(*class_names); end
 
-  def admin_class; end
   def issuer_for(request = nil); end
   def admin_origin_for(request = nil); end
   def dashboard_directories; end
@@ -263,11 +265,10 @@ end
 JSON-RPC endpoint at `/`. `draw_admin_origin` adds `GET` and `POST /mcp/oauth/authorize`; pass
 `path:` to move it.
 
-To serve everything on one origin instead, mount the engine:
-
-```ruby
-mount Administrate::MCP::Engine => '/mcp'
-```
+Both sets have to sit at the root of their origin. The metadata documents the engine publishes name
+the token, registration and JSON-RPC endpoints as absolute paths — `/oauth/token`, `/oauth/register`,
+`/` — so mounting the engine under a prefix would advertise paths that do not answer. If you serve
+everything on a single origin, call both helpers on that origin rather than mounting the engine.
 
 ## Dashboard declarations
 
@@ -432,8 +433,26 @@ reports `more?`; schedule it however your app schedules work.
   gemspec pins administrate below 2. It differs from `Administrate::Search` in one deliberate way:
   every comparison casts the column to text, so a plain word searched against a uuid `id` column
   returns no rows instead of raising `PG::InvalidTextRepresentation` and aborting the transaction.
+- **Registration accepts more loopback hosts than the original.** `localhost`, `127.0.0.1`, `::1` and
+  any `*.localhost` subdomain register and receive codes over plain http; the Sorare original allowed
+  only `localhost` and `127.0.0.1`. `*.localhost` is what parallel development checkouts use, and the
+  match is on the parsed hostname, so `localhost.attacker.com` is still rejected. Set
+  `allow_localhost_redirects = false` to require https everywhere.
+- **`Field::Text` and `Field::Url` serialize a nil as `null`.** They are registered as scalars, so an
+  empty value comes back as `null` rather than the `""` the original's `to_s` fallback produced.
+- **`report_mcp_improvement` requires no role.** The original listed every role the host had, which
+  in practice admitted everyone except an admin with no roles at all; it is now open to any
+  authenticated admin.
 - **Feedback services are plain objects.** `ReportImprovement` and `CleanOldFeedbacks` return a
   result struct and do no scheduling; the host decides how and when to run them.
+
+## Known limitations
+
+- **OAuth access and refresh tokens are stored in plaintext.** API keys are stored only as a SHA-256
+  digest, but `administrate_mcp_oauth_access_tokens.token` and `.refresh_token` hold the values
+  themselves, so anyone who can read that table can act as any admin who has authorized a client.
+  Treat it as you would a credentials table. A digest scheme is planned; until then, revoking a token
+  (`revoke!`) is the remedy, and access tokens expire after a week.
 
 ## Development
 

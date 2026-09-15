@@ -124,10 +124,6 @@ module Administrate
         self
       end
 
-      def admin_class
-        @admin_class_name.to_s.constantize
-      end
-
       def issuer_for(request = nil)
         resolve_origin(@issuer, request)
       end

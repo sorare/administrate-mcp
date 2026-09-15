@@ -22,7 +22,8 @@ Gem::Specification.new do |spec|
   spec.files = Dir['{app,config,db,lib}/**/*', 'LICENSE.txt', 'README.md']
   spec.require_paths = ['lib']
 
-  spec.add_dependency 'administrate', '>= 1.0.0.beta3'
+  # FastSearch subclasses Administrate::Search and uses methods that class treats as internal.
+  spec.add_dependency 'administrate', '>= 1.0.0.beta3', '< 2'
   spec.add_dependency 'mcp', '~> 1.5'
   spec.add_dependency 'rails', '>= 8.1'
 end
