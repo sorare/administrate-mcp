@@ -1,7 +1,9 @@
 /.bundle/
 /pkg/
 /tmp/
-/spec/dummy/log/
-/spec/dummy/tmp/
+/spec/dummy/log/*
+!/spec/dummy/log/.keep
+/spec/dummy/tmp/*
+!/spec/dummy/tmp/.keep
 /spec/dummy/storage/
 Gemfile.lock
