@@ -29,6 +29,10 @@ RSpec.describe Administrate::MCP::OAuthService do
         expect(service.valid_redirect_uri?(application, 'http://127.0.0.1:8080/cb')).to be(true)
       end
 
+      it 'accepts the IPv6 loopback' do
+        expect(service.valid_redirect_uri?(application, 'http://[::1]:8080/cb')).to be(true)
+      end
+
       it 'accepts a .localhost subdomain' do
         expect(service.valid_redirect_uri?(application, 'http://scenic-cedar.localhost:5003/callback')).to be(true)
       end

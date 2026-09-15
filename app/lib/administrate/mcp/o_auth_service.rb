@@ -51,13 +51,13 @@ module Administrate
       private
 
       # Loopback redirects (RFC 8252) are allowed on any port, but the host must be a real loopback
-      # host — matched on the parsed host, so `http://localhost.attacker.com` cannot intercept an
+      # host — matched on the parsed hostname, so `http://localhost.attacker.com` cannot intercept an
       # authorization code.
       def loopback_redirect_uri?(uri)
         return false unless Administrate::MCP.config.allow_localhost_redirects
 
         parsed = URI.parse(uri)
-        parsed.scheme == 'http' && LoopbackUri.localhost?(parsed.host)
+        parsed.scheme == 'http' && LoopbackUri.localhost?(parsed.hostname)
       rescue URI::InvalidURIError
         false
       end

@@ -32,6 +32,10 @@ RSpec.describe Administrate::MCP::OAuthApplication do
       expect(application(['http://127.0.0.1:3000/cb'])).to be_valid
     end
 
+    it 'accepts http on the IPv6 loopback' do
+      expect(application(['http://[::1]:8080/cb'])).to be_valid
+    end
+
     it 'rejects http elsewhere' do
       expect(application(['http://evil.com/cb'])).not_to be_valid
     end

@@ -107,6 +107,12 @@ RSpec.describe Administrate::MCP::OAuthController do
       expect(response).to have_http_status(:bad_request)
     end
 
+    it 'accepts an IPv6 loopback redirect_uri and redirects the code back to it' do
+      register(client_name: 'My Client', redirect_uris: ['http://[::1]:8080/cb'])
+
+      expect(response).to have_http_status(:created)
+    end
+
     it 'accepts loopback http redirect_uris' do
       register(client_name: 'My Client', redirect_uris: ['http://127.0.0.1:3000/callback'])
 
@@ -245,6 +251,22 @@ RSpec.describe Administrate::MCP::OAuthController do
 
       expect(response).to have_http_status(:redirect)
       expect(response.location).to include('code=', 'state=test_state')
+    end
+
+    it 'redirects the code back to an IPv6 loopback callback' do
+      application.update!(redirect_uris: ['http://[::1]:8080/cb'])
+
+      post '/mcp/oauth/authorize',
+           params: {
+             client_id: application.client_id,
+             redirect_uri: 'http://[::1]:8080/cb',
+             code_challenge: valid_code_challenge,
+             state: 'test_state'
+           },
+           headers: signed_in
+
+      expect(response).to have_http_status(:redirect)
+      expect(response.location).to start_with('http://[::1]:8080/cb?code=')
     end
 
     it 'redirects with an error when denied' do

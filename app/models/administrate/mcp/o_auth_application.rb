@@ -49,7 +49,7 @@ module Administrate
 
       def validate_single_redirect_uri(uri_string)
         uri = URI.parse(uri_string)
-        return if uri.scheme == 'http' && loopback_allowed?(uri.host)
+        return if uri.scheme == 'http' && loopback_allowed?(uri.hostname)
 
         errors.add(:redirect_uris, "#{uri_string} must use https scheme") unless uri.scheme == 'https'
       rescue URI::InvalidURIError
