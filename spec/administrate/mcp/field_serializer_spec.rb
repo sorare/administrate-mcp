@@ -199,4 +199,34 @@ RSpec.describe Administrate::MCP::FieldSerializer do
       expect(described_class.skip_field?(Administrate::Field::String)).to be(false)
     end
   end
+
+  describe 'MCP_SKIPPED_ATTRIBUTES' do
+    let(:widget) { create(:widget) }
+
+    before { stub_const('WidgetDashboard::MCP_SKIPPED_ATTRIBUTES', %i[slug]) }
+
+    it 'omits the attribute from a serialized record' do
+      result = described_class.serialize(widget, WidgetDashboard.new, attributes: %i[id slug])
+
+      expect(result).to have_key(:id)
+      expect(result).not_to have_key(:slug)
+    end
+
+    it 'omits the attribute from the resolved columns' do
+      expect(described_class.exposed_attributes(WidgetDashboard.new)).not_to include(:slug)
+    end
+  end
+
+  describe 'admin URL host fallback' do
+    let(:widget) { create(:widget) }
+
+    before { Administrate::MCP.config.admin_url_options = {} }
+    after { Administrate::MCP.config.admin_url_options = { host: 'admin.example.com', protocol: 'https' } }
+
+    it 'takes the host from admin_origin when none is configured' do
+      result = described_class.serialize(widget, WidgetDashboard.new, attributes: %i[id])
+
+      expect(result[:url]).to start_with('https://admin.example.com/')
+    end
+  end
 end

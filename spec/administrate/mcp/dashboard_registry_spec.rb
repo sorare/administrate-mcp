@@ -71,4 +71,26 @@ RSpec.describe Administrate::MCP::DashboardRegistry do
       expect(described_class.dashboard_class_name(file)).to eq('WidgetDashboard')
     end
   end
+
+  describe 'dashboard constants' do
+    it 'leaves out a dashboard that sets MCP_EXPOSED to false' do
+      stub_const('GadgetDashboard::MCP_EXPOSED', false)
+      described_class.reset!
+
+      expect(described_class.find('gadget')).to be_nil
+    end
+
+    it 'reads MCP_SKIPPED_ATTRIBUTES as symbols' do
+      stub_const('WidgetDashboard::MCP_SKIPPED_ATTRIBUTES', %w[slug])
+
+      expect(described_class.skipped_attributes(WidgetDashboard)).to eq(%i[slug])
+    end
+
+    it 'uses the model the dashboard declares' do
+      allow(WidgetDashboard).to receive(:model).and_return(Gadget)
+      described_class.reset!
+
+      expect(described_class.find('gadget').dashboard_class).to eq(WidgetDashboard)
+    end
+  end
 end

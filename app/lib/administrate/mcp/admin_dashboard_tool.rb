@@ -60,7 +60,7 @@ module Administrate
         def resolve_attributes(dashboard, fields, default_method)
           return dashboard.public_send(default_method) if fields.blank?
 
-          reject_unknown!('fields', fields, dashboard.show_page_attributes)
+          reject_unknown!('fields', fields, FieldSerializer.exposed_attributes(dashboard))
 
           fields.map(&:to_sym)
         end
@@ -80,7 +80,8 @@ module Administrate
         def validated_expand_set(dashboard, expand, attributes, max_expand)
           return nil if expand.blank?
 
-          expandable = expandable_attributes(dashboard) & (dashboard.show_page_attributes.to_a | attributes.to_a)
+          exposed = FieldSerializer.exposed_attributes(dashboard) | attributes.to_a
+          expandable = expandable_attributes(dashboard) & exposed
           reject_unknown!('expandable associations', expand, expandable)
           reject_over_limit!('expansions', expand.size, max_expand)
 

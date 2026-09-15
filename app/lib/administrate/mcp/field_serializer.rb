@@ -33,7 +33,7 @@ module Administrate
 
       class << self
         def serialize(record, dashboard, attributes: nil, expand: nil, resolve_getters: false)
-          attrs = attributes || dashboard.show_page_attributes
+          attrs = exposed_attributes(dashboard, attributes)
           attrs.each_with_object({ url: admin_url_for(record) }) do |attr_name, hash|
             field_spec = dashboard.attribute_types[attr_name]
             next unless field_spec
@@ -65,12 +65,26 @@ module Administrate
           config = Administrate::MCP.config
           Rails.application.routes.url_helpers.polymorphic_url(
             [config.admin_route_namespace, record],
-            **config.admin_url_options
+            **admin_url_options(config)
           )
         end
 
+        def admin_url_options(config)
+          options = config.admin_url_options
+          return options if options[:host].present?
+
+          origin = URI.parse(config.admin_origin_for.to_s)
+          return options if origin.host.blank?
+
+          { host: origin.host, protocol: origin.scheme, port: origin.port }.compact.merge(options)
+        end
+
+        def exposed_attributes(dashboard, attributes = nil)
+          (attributes || dashboard.show_page_attributes) - DashboardRegistry.skipped_attributes(dashboard)
+        end
+
         def resolve_columns(dashboard, attributes)
-          (attributes || dashboard.show_page_attributes).select do |attr_name|
+          exposed_attributes(dashboard, attributes).select do |attr_name|
             field_spec = dashboard.attribute_types[attr_name]
             next false unless field_spec
 

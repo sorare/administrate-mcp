@@ -188,7 +188,7 @@ end
 | `default_client_name` | `'MCP Client'` | Name given to a dynamically registered client that sends no `client_name` |
 | `sidekiq_stats_provider` | `nil` | Object answering `counts`, `total_counts`, `queues`, `stats_cleared_at`; a class name String or a Proc is resolved lazily so autoloaded providers can be named in an initializer |
 | `admin_route_namespace` | `:admin` | Namespace used to build record URLs |
-| `admin_url_options` | `{}` | Options passed to `polymorphic_url` |
+| `admin_url_options` | `{}` | Options passed to `polymorphic_url`; when no `:host` is given, host, protocol and port are taken from `admin_origin` |
 | `skipped_field_classes` | Password | Field class names never serialized |
 | `has_many_field_classes` | HasMany | Field class names treated as expandable collections |
 | `field_serializers` | see above | Field class name to serializer |
@@ -280,6 +280,10 @@ end
 ```
 
 - `MCP_DESCRIPTION` tells the client what the resource is.
+- `MCP_SKIPPED_ATTRIBUTES = %i[email]` keeps attributes visible in the admin UI but out of MCP
+  reads, listings and field selection.
+- `MCP_EXPOSED = false` leaves the dashboard out of the MCP registry entirely.
+- Namespaced models work through the dashboard's own `self.model`, as in Administrate.
 - `MCP_BASE_SCOPE` replaces the model's default scope for MCP reads, mirroring an admin controller's
   `scoped_resource`.
 - `COLLECTION_FILTERS` are published as filters; a one-argument lambda is a boolean filter, a

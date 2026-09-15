@@ -8,6 +8,7 @@ require 'administrate/mcp/errors'
 require 'administrate/mcp/loopback_uri'
 require 'administrate/mcp/configuration'
 require 'administrate/mcp/routes'
+require 'administrate/mcp/rack_attack'
 require 'administrate/mcp/engine'
 
 module Administrate
