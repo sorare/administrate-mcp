@@ -337,6 +337,45 @@ registers exactly these:
 | `mcp_oauth/token/ip` | `POST /oauth/token` on the MCP host | 10 per minute per IP |
 | `mcp_oauth/authorize/ip` | `GET /mcp/oauth/authorize` | 20 per minute per IP |
 
+## Exposing the engine's own tables in your admin
+
+The engine's records keep their namespace in `model_name`, so `Administrate::MCP::ApiKey` routes as
+`administrate_mcp_api_keys` and never shadows a resource of your own called `api_keys`. Administrate
+needs three things to manage a namespaced model:
+
+```ruby
+# config/routes.rb, inside your admin namespace
+namespace :admin do
+  resources :administrate_mcp_api_keys
+  resources :administrate_mcp_feedbacks, only: %i[index show destroy]
+end
+
+# app/dashboards/administrate_mcp/api_key_dashboard.rb
+module AdministrateMcp
+  class ApiKeyDashboard < Administrate::BaseDashboard
+    ATTRIBUTE_TYPES = { id: Field::String, name: Field::String, admin: Field::BelongsTo }.freeze
+    COLLECTION_ATTRIBUTES = %i[id name].freeze
+    SHOW_PAGE_ATTRIBUTES = %i[id name admin].freeze
+    FORM_ATTRIBUTES = %i[name].freeze
+
+    def self.model
+      Administrate::MCP::ApiKey
+    end
+  end
+end
+
+# app/controllers/admin/administrate_mcp_api_keys_controller.rb
+module Admin
+  class AdministrateMcpApiKeysController < Admin::ApplicationController
+    def resource_class = Administrate::MCP::ApiKey
+    def dashboard_class = AdministrateMcp::ApiKeyDashboard
+  end
+end
+```
+
+The MCP registry finds the dashboard through `self.model`, registers it as
+`administrate/mcp/api_key`, and builds record URLs from the namespaced route key.
+
 ## Customising the consent screen
 
 Override `app/views/administrate/mcp/o_auth/authorize.html.erb` in your application. The template

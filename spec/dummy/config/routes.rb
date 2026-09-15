@@ -14,5 +14,6 @@ Rails.application.routes.draw do
     resources :widgets, only: %i[index show]
     resources :gadgets, only: %i[index show]
     resources :admins, only: %i[index show]
+    resources :administrate_mcp_api_keys, only: %i[index show]
   end
 end
