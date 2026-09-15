@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Authorize MCP access</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 2rem; max-width: 400px; width: 100%; }
+    h1 { font-size: 1.25rem; margin: 0 0 1rem; }
+    p { color: #555; line-height: 1.5; }
+    .actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+    button { flex: 1; padding: 0.75rem; border-radius: 6px; font-size: 1rem; cursor: pointer; border: 1px solid #ddd; }
+    .approve { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .approve:hover { background: #1d4ed8; }
+    .deny { background: #fff; }
+    .deny:hover { background: #f5f5f5; }
+    .details { margin: 1.25rem 0 0; border: 1px solid #eee; border-radius: 6px; padding: 0.75rem 1rem; background: #fafafa; }
+    .details dt { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin-top: 0.5rem; }
+    .details dt:first-child { margin-top: 0; }
+    .details dd { margin: 0.2rem 0 0; color: #222; word-break: break-all; }
+    .details .host { font-weight: 600; }
+    .details code { background: #eee; border-radius: 4px; padding: 0.05rem 0.35rem; font-size: 0.85rem; }
+    .scope-write { color: #b45309; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Authorize MCP access</h1>
+    <p><strong><%= @application.name %></strong> is requesting access to the admin MCP server on your behalf.</p>
+    <dl class="details">
+      <dt>Redirects to</dt>
+      <dd>
+        <span class="host"><%= @redirect_host || 'unknown host' %></span>
+        <div><%= @redirect_uri %></div>
+      </dd>
+      <dt>Access requested</dt>
+      <dd>
+        <% if @scopes.empty? %>
+          Read-only
+        <% else %>
+          <% @scopes.each do |scope| %>
+            <code class="<%= 'scope-write' if scope == 'write' %>"><%= scope %></code>
+          <% end %>
+        <% end %>
+      </dd>
+    </dl>
+    <p>Only authorize if you recognize this application and the destination above.</p>
+    <%= form_tag(nil, method: :post) do %>
+      <%= hidden_field_tag :client_id, params[:client_id] %>
+      <%= hidden_field_tag :redirect_uri, params[:redirect_uri] %>
+      <%= hidden_field_tag :state, params[:state] %>
+      <%= hidden_field_tag :code_challenge, params[:code_challenge] %>
+      <%= hidden_field_tag :code_challenge_method, params[:code_challenge_method] %>
+      <%= hidden_field_tag :scope, params[:scope] %>
+      <%= hidden_field_tag :response_type, params[:response_type] %>
+      <div class="actions">
+        <button type="submit" name="deny" value="1" class="deny">Deny</button>
+        <button type="submit" class="approve">Authorize</button>
+      </div>
+    <% end %>
+  </div>
+</body>
+</html>

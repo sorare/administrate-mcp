@@ -1,0 +1,9 @@
+test:
+  adapter: postgresql
+  encoding: unicode
+  host: <%= ENV.fetch('ADMINISTRATE_MCP_DB_HOST', 'localhost') %>
+  port: <%= ENV.fetch('ADMINISTRATE_MCP_DB_PORT', 5432) %>
+  username: <%= ENV.fetch('ADMINISTRATE_MCP_DB_USER', 'postgres') %>
+  password: <%= ENV.fetch('ADMINISTRATE_MCP_DB_PASSWORD', 'postgres') %>
+  database: <%= ENV.fetch('ADMINISTRATE_MCP_DB_NAME', 'administrate_mcp_test') %>
+  pool: 5

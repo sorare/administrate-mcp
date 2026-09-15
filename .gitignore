@@ -1,0 +1,7 @@
+/.bundle/
+/pkg/
+/tmp/
+/spec/dummy/log/
+/spec/dummy/tmp/
+/spec/dummy/storage/
+Gemfile.lock
