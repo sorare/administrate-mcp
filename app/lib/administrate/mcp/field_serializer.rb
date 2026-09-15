@@ -249,10 +249,21 @@ module Administrate
 
         private
 
+        # A field class registered under its own name wins outright. Otherwise a class that speaks
+        # `mcp_value` answers for itself, ahead of anything inherited from an ancestor: that is how
+        # a host subclasses a registered field to publish a richer value.
         def lookup_serializer(field_class)
           return nil unless field_class.is_a?(Class)
 
           registry = Administrate::MCP.config.field_serializers
+          own = field_class.name && registry[field_class.name]
+          return own if own
+          return nil if field_class.respond_to?(:mcp_value)
+
+          inherited_serializer(field_class, registry)
+        end
+
+        def inherited_serializer(field_class, registry)
           field_class.ancestors.each do |ancestor|
             name = ancestor.name
             next unless name

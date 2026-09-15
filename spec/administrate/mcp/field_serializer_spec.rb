@@ -127,6 +127,27 @@ RSpec.describe Administrate::MCP::FieldSerializer do
       end
     end
 
+    context 'with a subclass of a registered field class that defines mcp_value' do
+      let(:rich_string_field) do
+        Class.new(Administrate::Field::String) do
+          def self.mcp_value(record, _attr_name)
+            { parsed: record.name.upcase }
+          end
+        end
+      end
+
+      before do
+        stub_const('RichStringField', rich_string_field)
+        allow(dashboard).to receive(:attribute_types).and_return(name: RichStringField)
+      end
+
+      it 'prefers mcp_value over the serializer registered for the parent' do
+        result = described_class.serialize(widget, dashboard, attributes: %i[name])
+
+        expect(result[:name]).to eq({ parsed: widget.name.upcase })
+      end
+    end
+
     context 'with an unregistered field class' do
       let(:unknown_field) { Class.new(Administrate::Field::Base) }
 
