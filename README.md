@@ -123,7 +123,6 @@ class Configuration
                 :on_feedback,
                 :on_error,
                 :allow_localhost_redirects,
-                :api_key_token_prefix,
                 :default_client_name,
                 :sidekiq_stats_provider,
                 :admin_route_namespace,
@@ -131,6 +130,8 @@ class Configuration
                 :skipped_field_classes,
                 :has_many_field_classes,
                 :field_serializers
+
+  attr_reader :api_key_token_prefix
 
   def assign_identity
     @server_name = 'administrate_mcp'
@@ -165,6 +166,8 @@ class Configuration
     @has_many_field_classes = HAS_MANY_FIELD_CLASSES.dup
     @field_serializers = FIELD_SERIALIZERS.dup
   end
+
+  def api_key_token_prefix=(prefix); end          # raises ArgumentError on a blank prefix
 
   def register_field(class_name, as: nil, &serializer); end
   def skip_field(*class_names); end
