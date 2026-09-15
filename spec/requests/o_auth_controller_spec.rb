@@ -313,6 +313,24 @@ RSpec.describe Administrate::MCP::OAuthController do
       end
     end
 
+    it 'appends the code to a callback that already carries a query string' do
+      application.update!(redirect_uris: ['https://client.example.com/cb?tenant=acme'])
+
+      post '/mcp/oauth/authorize',
+           params: {
+             client_id: application.client_id,
+             redirect_uri: 'https://client.example.com/cb?tenant=acme',
+             code_challenge: valid_code_challenge,
+             state: 'test_state'
+           },
+           headers: signed_in
+
+      query = URI.decode_www_form(URI.parse(response.location).query).to_h
+      expect(query['tenant']).to eq('acme')
+      expect(query['state']).to eq('test_state')
+      expect(query['code']).to be_present
+    end
+
     it 'redirects with an error when denied' do
       post '/mcp/oauth/authorize',
            params: {

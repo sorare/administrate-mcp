@@ -64,12 +64,11 @@ module Administrate
         return unless redirect_uri
 
         if params[:deny].present?
-          return redirect_to "#{redirect_uri}?error=access_denied&state=#{encoded_state}", allow_other_host: true
+          return redirect_to callback_url(redirect_uri, error: 'access_denied'), allow_other_host: true
         end
 
         grant = create_access_grant(application, redirect_uri)
-        redirect_to "#{redirect_uri}?code=#{ERB::Util.url_encode(grant.token)}&state=#{encoded_state}",
-                    allow_other_host: true
+        redirect_to callback_url(redirect_uri, code: grant.token), allow_other_host: true
       end
 
       def token
@@ -149,8 +148,13 @@ module Administrate
         nil
       end
 
-      def encoded_state
-        ERB::Util.url_encode(params[:state].to_s)
+      # A registered callback may already carry a query string, so the response parameters are
+      # appended to it rather than started with a second `?`.
+      def callback_url(redirect_uri, **response_params)
+        uri = URI.parse(redirect_uri)
+        existing = URI.decode_www_form(uri.query.to_s)
+        uri.query = URI.encode_www_form(existing + response_params.merge(state: params[:state].to_s).to_a)
+        uri.to_s
       end
 
       def assign_consent_details
