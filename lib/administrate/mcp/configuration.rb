@@ -40,6 +40,7 @@ module Administrate
                     :admin_origin,
                     :current_admin,
                     :admin_active,
+                    :identity_fallback,
                     :sign_in,
                     :admin_class_name,
                     :authorization,
@@ -74,6 +75,7 @@ module Administrate
         @admin_origin = nil
         @current_admin = ->(_controller) {}
         @admin_active = ->(_admin) { true }
+        @identity_fallback = ->(_request) {}
         @sign_in = nil
         @admin_class_name = 'Administrator'
         @authorization = default_authorization

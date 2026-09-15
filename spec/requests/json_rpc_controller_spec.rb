@@ -117,6 +117,53 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       end
     end
 
+    context 'with an identity fallback configured' do
+      before do
+        Administrate::MCP.config.identity_fallback = lambda do |request|
+          id = request.headers['X-Asserted-Admin']
+          id && Administrate::MCP::Authentication::Identity.new(admin: Admin.find_by(id:), scopes: [])
+        end
+      end
+
+      it 'authenticates a request that carries no Authorization header' do
+        post '/',
+             params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
+             headers: headers.except('Authorization').merge('X-Asserted-Admin' => admin.id)
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body.dig('result', 'tools').pluck('name')).to include('admin_resource_show')
+      end
+
+      it 'still refuses when the fallback asserts nothing' do
+        post '/', params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
+                  headers: headers.except('Authorization')
+
+        expect(response).to have_http_status(:unauthorized)
+        expect(response.headers['X-Auth-Error']).to eq('unknown')
+      end
+
+      context 'when the fallback recognises the caller but finds no admin' do
+        before do
+          Administrate::MCP.config.identity_fallback = lambda do |_request|
+            raise Administrate::MCP::Authentication::ExternalIdentityError.new(
+              'No admin account for this identity',
+              auth_error_type: 'cloudflare_access'
+            )
+          end
+        end
+
+        it 'returns 401 with the host error type and code -32001' do
+          post '/', params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
+                    headers: headers.except('Authorization')
+
+          expect(response).to have_http_status(:unauthorized)
+          expect(response.headers['X-Auth-Error']).to eq('cloudflare_access')
+          expect(response.parsed_body.dig('error', 'code')).to eq(-32_001)
+          expect(response.parsed_body.dig('error', 'message')).to eq('No admin account for this identity')
+        end
+      end
+    end
+
     context 'when the host reports the admin as no longer active' do
       before { Administrate::MCP.config.admin_active = ->(_admin) { false } }
 
