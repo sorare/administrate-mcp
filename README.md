@@ -112,6 +112,7 @@ class Configuration
                 :admin_origin,
                 :current_admin,
                 :admin_active,
+                :identity_fallback,
                 :sign_in,
                 :admin_class_name,
                 :authorization,
@@ -140,6 +141,7 @@ class Configuration
     @admin_origin = nil
     @current_admin = ->(_controller) {}
     @admin_active = ->(_admin) { true }
+    @identity_fallback = ->(_request) {}
     @sign_in = nil
     @admin_class_name = 'Administrator'
     @authorization = default_authorization
@@ -187,6 +189,7 @@ end
 | `admin_origin` | `nil` | Admin origin, where the consent screen lives. String or proc |
 | `current_admin` | returns `nil` | Proc taking the OAuth controller, returning the signed-in admin |
 | `admin_active` | `true` | Proc taking the authenticated admin. Return false and the call is refused with 401 `inactive_admin`, so a credential does not outlive the person's admin status |
+| `identity_fallback` | returns `nil` | Proc taking the request, returning an `Authentication::Identity` or nil, consulted when no credential the engine issued matched |
 | `sign_in` | `nil` (renders 401) | Proc taking the OAuth controller, sending an anonymous visitor to sign in |
 | `admin_class_name` | `'Administrator'` | Class the `admin_id` column points at |
 | `authorization` | Pundit if defined, else Permissive | Adapter: `authorize!`, `authorized?`, `authorize_roles!` |
@@ -332,6 +335,38 @@ matching, and the holders have to be issued new ones.
 and exchange the code with PKCE. Access tokens last a week, authorization codes ten minutes, and
 refreshing revokes the old token.
 
+### Identity fallback
+
+Some deployments authenticate the caller before the request reaches Rails. Cloudflare Access managed
+OAuth is the common case: Access resolves the client's bearer token at its own edge and forwards an
+assertion, so the application only ever sees a token no row of ours matches. `identity_fallback` is
+where you turn that assertion into an admin:
+
+```ruby
+c.identity_fallback = lambda do |request|
+  email = CloudflareAccess.email(request) # your own verification of the Access JWT
+  next nil unless email
+
+  admin = Administrator.find_by(email:)
+  unless admin
+    raise Administrate::MCP::Authentication::ExternalIdentityError.new(
+      "No admin account for #{email}",
+      auth_error_type: 'cloudflare_access'
+    )
+  end
+
+  Administrate::MCP::Authentication::Identity.new(admin:, scopes: ['write'])
+end
+```
+
+It is consulted only when nothing the engine issued matched: an absent `Authorization` header, or a
+bearer token that is neither an API key by prefix nor a row in the OAuth tokens table. A key or token
+that *is* recognised and then fails — revoked, expired, unknown digest — raises as before and never
+reaches the fallback, so a revoked credential cannot be laundered into an Access identity. Returning
+nil leaves the original refusal in place. Raising `ExternalIdentityError` is how you say "I know who
+this is and they have no account": it answers 401 with the `auth_error_type` you pass as
+`X-Auth-Error` and JSON-RPC code `-32001`. `admin_active` applies to fallback identities too.
+
 A credential outlives the admin who holds it: revoking someone's admin role, deactivating or
 anonymizing their account does nothing to a key or token they were already issued, and a tool such as
 `sidekiq_retries` never consults the authorization adapter. Set `admin_active` so every call
@@ -446,6 +481,10 @@ reports `more?`; schedule it however your app schedules work.
 - **`report_mcp_improvement` requires no role.** The original listed every role the host had, which
   in practice admitted everyone except an admin with no roles at all; it is now open to any
   authenticated admin.
+- **Authentication is extensible, not replaceable.** `identity_fallback` runs only after the
+  engine's own credentials have had their turn and only when none of them matched, so a host can add
+  an external identity source — an edge proxy, an SSO assertion — without weakening the tokens the
+  engine issues.
 - **Feedback services are plain objects.** `ReportImprovement` and `CleanOldFeedbacks` return a
   result struct and do no scheduling; the host decides how and when to run them.
 
