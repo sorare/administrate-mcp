@@ -54,6 +54,19 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceList do
         expect(call(resource: 'widget', query: widget.slug)['meta']['total_count']).to eq(1)
       end
 
+      it 'returns an empty page rather than erroring when the term is not a uuid' do
+        data = call(resource: 'widget', query: 'zorglub')
+
+        expect(data['meta']['total_count']).to eq(0)
+        expect(data['rows']).to eq([])
+      end
+
+      it 'matches an exact id, which is a uuid column' do
+        widget = Widget.first
+
+        expect(call(resource: 'widget', query: widget.id)['meta']['total_count']).to eq(1)
+      end
+
       it 'matches a wildcard' do
         expect(call(resource: 'widget', query: '*widget*')['meta']['total_count']).to eq(3)
       end

@@ -413,7 +413,12 @@ reports `more?`; schedule it however your app schedules work.
   `admin_resource_list_resources`, `report_mcp_improvement`, `sidekiq_stats`, `sidekiq_retries` — so
   existing clients keep working.
 - **`FastSearch` ships with the engine.** The list tool searches exactly by default, with `*` as the
-  only wildcard, so searching an id or a slug does not match every row that contains it.
+  only wildcard, so searching an id or a slug does not match every row that contains it. It is a
+  subclass of `Administrate::Search` and calls methods that class treats as internal
+  (`search_attributes`, `searchable_fields`, `query_table_name`, `column_to_query`), which is why the
+  gemspec pins administrate below 2. It differs from `Administrate::Search` in one deliberate way:
+  every comparison casts the column to text, so a plain word searched against a uuid `id` column
+  returns no rows instead of raising `PG::InvalidTextRepresentation` and aborting the transaction.
 - **Feedback services are plain objects.** `ReportImprovement` and `CleanOldFeedbacks` return a
   result struct and do no scheduling; the host decides how and when to run them.
 

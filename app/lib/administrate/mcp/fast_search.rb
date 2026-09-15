@@ -34,9 +34,13 @@ module Administrate
 
       def field_template(table_name, field)
         column_name = column_to_query(field)
-        return "LOWER(#{table_name}.#{column_name}::text) #{operator} ?" unless PRIMARY_COLUMN_NAMES.include?(field)
+        return "LOWER(CAST(#{table_name}.#{column_name} AS TEXT)) #{operator} ?" unless primary?(field)
 
-        "#{table_name}.#{column_name}#{'::text' if operator == 'LIKE'} #{operator} ?"
+        "CAST(#{table_name}.#{column_name} AS TEXT) #{operator} ?"
+      end
+
+      def primary?(field)
+        PRIMARY_COLUMN_NAMES.include?(field)
       end
     end
   end
