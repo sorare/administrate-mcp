@@ -416,8 +416,8 @@ through. It answers `call(request)`, so it can be assigned to `identity_fallback
 Administrate::MCP.configure do |c|
   c.oauth = false
   c.identity_fallback = Administrate::MCP::CloudflareAccess.new(
-    team_domain: ENV.fetch('CLOUDFLARE_ACCESS_TEAM_DOMAIN'),
-    audience: ENV.fetch('CLOUDFLARE_ACCESS_MCP_AUD'),
+    team_domain: -> { ENV.fetch('CLOUDFLARE_ACCESS_TEAM_DOMAIN', nil) },
+    audience: -> { ENV.fetch('CLOUDFLARE_ACCESS_MCP_AUD', nil) },
     find_admin: ->(email) { Administrator.find_by(email:) },
     scopes_for: ->(admin) { admin.mcp_write_access? ? ['write'] : [] }
   )
@@ -428,9 +428,19 @@ It reads the `Cf-Access-Jwt-Assertion` header, verifies the RS256 signature agai
 `<team_domain>/cdn-cgi/access/certs` (cached an hour, refetched once when a key id is unknown, which
 is what a key rotation looks like), and checks the issuer and audience. `find_admin` receives the
 lowercased email and `scopes_for` the admin it returned; returning no admin raises
-`ExternalIdentityError` with `X-Auth-Error: cloudflare_access`. Leave `team_domain` or `audience`
-blank and it returns nil without calling Cloudflare, so it is safe to configure everywhere and enable
-per environment.
+`ExternalIdentityError` with `X-Auth-Error: cloudflare_access`.
+
+`team_domain` and `audience` each take a value or a callable. Pass lambdas, as above. You build this
+object in an initializer, and a plain `ENV.fetch` there is read once at boot: in an environment where
+those variables are set later, or not set at all, the object would be permanently unconfigured and
+would quietly refuse every request. A lambda is re-read on each call, so the settings can arrive
+after boot and a spec can change them.
+
+A blank `team_domain` or `audience` means the verifier accepts **nothing**. It returns nil for every
+assertion without calling Cloudflare — it does not fall through to an unverified one, and it does not
+skip the audience check. Configuring it everywhere and enabling it per environment is therefore safe,
+but so is getting it wrong: a typo in the audience variable refuses all callers rather than admitting
+assertions minted for some other Access application.
 
 Access must be in front of the JSON-RPC origin for this to mean anything: the assertion is only
 trustworthy because nothing can reach the application without passing through Access.
@@ -551,7 +561,9 @@ reports `more?`; schedule it however your app schedules work.
 - **`CloudflareAccess` takes its collaborators in its constructor.** The team domain, audience, admin
   lookup and scope decision are all arguments rather than environment variables or model calls, so
   the class knows nothing about any particular application and can be built twice with different
-  audiences in the same process.
+  audiences in the same process. The two settings resolve on every call rather than at construction,
+  because the object is built in an initializer and the environment it reads is not always readable
+  there.
 - **Feedback services are plain objects.** `ReportImprovement` and `CleanOldFeedbacks` return a
   result struct and do no scheduling; the host decides how and when to run them.
 

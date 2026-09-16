@@ -30,14 +30,23 @@ module Administrate
         Timeout::Error
       ].freeze
 
+      # `team_domain` and `audience` each take a value or something that answers `call`. Hosts build
+      # this in an initializer, before the environment that carries those settings is necessarily
+      # readable, so a callable is re-read on every request rather than captured at boot.
       def initialize(team_domain:, audience:, find_admin:, scopes_for: ->(_admin) { [] })
-        @team_domain = team_domain.presence
-        @audience = audience.presence
+        @team_domain = team_domain
+        @audience = audience
         @find_admin = find_admin
         @scopes_for = scopes_for
       end
 
-      attr_reader :team_domain, :audience
+      def team_domain
+        resolve(@team_domain)
+      end
+
+      def audience
+        resolve(@audience)
+      end
 
       def call(request)
         return nil unless configured?
@@ -104,6 +113,11 @@ module Administrate
       end
 
       private
+
+      def resolve(setting)
+        value = setting.respond_to?(:call) ? setting.call : setting
+        value.presence
+      end
 
       # The identity provider decides how it capitalises an address; the lookup should not care.
       def find_admin!(email)

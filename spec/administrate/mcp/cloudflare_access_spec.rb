@@ -162,6 +162,61 @@ RSpec.describe Administrate::MCP::CloudflareAccess do
     end
   end
 
+  describe 'settings supplied as a callable' do
+    subject(:access) do
+      described_class.new(
+        team_domain: -> { configured_team_domain },
+        audience: -> { configured_audience },
+        find_admin:
+      )
+    end
+
+    let(:configured_team_domain) { nil }
+    let(:configured_audience) { nil }
+
+    before { stub_certs([jwk.export]) }
+
+    context 'when neither is readable yet, as at boot' do
+      it 'refuses the assertion without calling Cloudflare' do
+        expect(access.call(request_with(assertion))).to be_nil
+        expect(WebMock).not_to have_requested(:get, certs_url)
+      end
+    end
+
+    context 'when the team domain arrives after construction' do
+      let(:configured_audience) { audience }
+
+      it 'is refused while blank and accepted once it reads' do
+        expect(access.call(request_with(assertion))).to be_nil
+
+        allow(self).to receive(:configured_team_domain).and_return(team_domain)
+
+        expect(access.call(request_with(assertion)).admin).to eq(admin)
+      end
+    end
+
+    context 'when the audience arrives after construction' do
+      let(:configured_team_domain) { team_domain }
+
+      it 'is refused while blank and accepted once it reads' do
+        expect(access.call(request_with(assertion))).to be_nil
+
+        allow(self).to receive(:configured_audience).and_return(audience)
+
+        expect(access.call(request_with(assertion)).admin).to eq(admin)
+      end
+    end
+
+    context 'when the audience is blank but the team domain reads' do
+      let(:configured_team_domain) { team_domain }
+
+      it 'accepts nothing rather than skipping the audience check' do
+        expect(access.call(request_with(sign(aud: 'any-other-application')))).to be_nil
+        expect(access.call(request_with(assertion))).to be_nil
+      end
+    end
+  end
+
   describe 'as an identity fallback' do
     before do
       stub_certs([jwk.export])
