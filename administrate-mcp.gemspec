@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.summary = 'Model Context Protocol server for Administrate dashboards'
   spec.description = 'Rails engine exposing Administrate dashboards over the Model Context Protocol, ' \
                      'with API key and OAuth 2.1 authentication.'
-  spec.homepage = 'https://github.com/sorare/administrate-mcp'
+  spec.homepage = 'https://gitlab.com/sorare/administrate-mcp'
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.2'
 
