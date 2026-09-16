@@ -6,7 +6,7 @@ RSpec.describe Administrate::MCP::CloudflareAccess do
   subject(:access) { described_class.new(team_domain:, audience:, find_admin:, **scopes) }
 
   let(:admin) { create(:admin) }
-  let(:team_domain) { 'https://sorare.cloudflareaccess.com' }
+  let(:team_domain) { 'https://example.cloudflareaccess.com' }
   let(:audience) { '9b1e4f0c3a' }
   let(:certs_url) { "#{team_domain}/cdn-cgi/access/certs" }
   let(:rsa_key) { OpenSSL::PKey::RSA.generate(2048) }
