@@ -30,5 +30,9 @@ rspec:
 
 rubocop:
   stage: test
+  # RuboCop with the rails and rspec extensions needs more headroom than the suite does.
+  variables:
+    KUBERNETES_MEMORY_REQUEST: 4Gi
+    KUBERNETES_MEMORY_LIMIT: 4Gi
   script:
     - bundle exec rubocop
