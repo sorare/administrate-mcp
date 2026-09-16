@@ -23,6 +23,7 @@ module Dummy
     config.consider_all_requests_local = true
     config.action_dispatch.show_exceptions = :none
     config.secret_key_base = 'dummy-secret-key-base-for-specs-only'
+    config.cache_store = :memory_store
     config.hosts.clear
     config.logger = Logger.new(File.expand_path('../log/test.log', __dir__))
   end

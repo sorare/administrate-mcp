@@ -24,6 +24,8 @@ Gem::Specification.new do |spec|
 
   # FastSearch subclasses Administrate::Search and uses methods that class treats as internal.
   spec.add_dependency 'administrate', '>= 1.0.0.beta3', '< 2'
+  # Verifying the Cloudflare Access assertion; only CloudflareAccess uses it.
+  spec.add_dependency 'jwt', '>= 2.7'
   spec.add_dependency 'mcp', '~> 1.5'
   spec.add_dependency 'rails', '>= 8.1'
 end
