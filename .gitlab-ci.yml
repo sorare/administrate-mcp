@@ -1,24 +1,20 @@
 default:
   image: ruby:4.0
-  cache:
-    key:
-      files:
-        - Gemfile
-        - administrate-mcp.gemspec
-    paths:
-      - vendor/ruby
+  tags:
+    - spot
   before_script:
-    - bundle config set --local path vendor/ruby
+    - ruby -v
     - bundle install --jobs 4
 
 variables:
-  POSTGRES_USER: postgres
-  POSTGRES_PASSWORD: postgres
-  POSTGRES_DB: administrate_mcp_test
+  KUBERNETES_MEMORY_REQUEST: 2Gi
+  KUBERNETES_MEMORY_LIMIT: 2Gi
+  KUBERNETES_CPU_REQUEST: 1000m
+  POSTGRES_HOST_AUTH_METHOD: trust
   ADMINISTRATE_MCP_DB_HOST: postgres
   ADMINISTRATE_MCP_DB_PORT: '5432'
   ADMINISTRATE_MCP_DB_USER: postgres
-  ADMINISTRATE_MCP_DB_PASSWORD: postgres
+  ADMINISTRATE_MCP_DB_PASSWORD: ''
   ADMINISTRATE_MCP_DB_NAME: administrate_mcp_test
 
 stages:
@@ -28,6 +24,7 @@ rspec:
   stage: test
   services:
     - name: postgres:17
+      alias: postgres
   script:
     - bundle exec rspec
 

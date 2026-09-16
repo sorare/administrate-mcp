@@ -18,6 +18,14 @@ ConfigureDummy.apply!
 ActiveRecord::Schema.verbose = false
 ActiveRecord::Migration.verbose = false
 
+# So `bundle exec rspec` works against a bare Postgres, locally and on CI, without a separate
+# createdb step.
+begin
+  ActiveRecord::Base.connection.execute('SELECT 1')
+rescue ActiveRecord::NoDatabaseError
+  ActiveRecord::Tasks::DatabaseTasks.create(ActiveRecord::Base.connection_db_config)
+end
+
 load File.expand_path('dummy/db/schema.rb', __dir__)
 ActiveRecord::MigrationContext.new(File.expand_path('../db/migrate', __dir__)).migrate
 
