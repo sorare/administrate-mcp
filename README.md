@@ -113,6 +113,7 @@ class Configuration
                 :current_admin,
                 :admin_active,
                 :identity_fallback,
+                :oauth,
                 :sign_in,
                 :admin_class_name,
                 :authorization,
@@ -142,6 +143,7 @@ class Configuration
     @current_admin = ->(_controller) {}
     @admin_active = ->(_admin) { true }
     @identity_fallback = ->(_request) {}
+    @oauth = true
     @sign_in = nil
     @admin_class_name = 'Administrator'
     @authorization = default_authorization
@@ -190,6 +192,7 @@ end
 | `current_admin` | returns `nil` | Proc taking the OAuth controller, returning the signed-in admin |
 | `admin_active` | `true` | Proc taking the authenticated admin. Return false and the call is refused with 401 `inactive_admin`, so a credential does not outlive the person's admin status |
 | `identity_fallback` | returns `nil` | Proc taking the request, returning an `Authentication::Identity` or nil, consulted when no credential the engine issued matched |
+| `oauth` | `true` | Whether the engine serves its own OAuth 2.1 server. False draws no OAuth routes and never looks an access token up |
 | `sign_in` | `nil` (renders 401) | Proc taking the OAuth controller, sending an anonymous visitor to sign in |
 | `admin_class_name` | `'Administrator'` | Class the `admin_id` column points at |
 | `authorization` | Pundit if defined, else Permissive | Adapter: `authorize!`, `authorized?`, `authorize_roles!` |
@@ -200,9 +203,9 @@ end
 | `on_tool_call` | no-op | Audit hook `(tool_name:, admin:, arguments:, scopes:)`, after the permission checks |
 | `on_feedback` | no-op | Called with each new `Feedback` record |
 | `on_error` | no-op | Called with an exception the engine swallowed, so you can report it |
-| `allow_localhost_redirects` | `true` | Whether loopback OAuth redirect URIs are accepted |
+| `allow_localhost_redirects` | `true` | Whether loopback OAuth redirect URIs are accepted. Inert when `oauth` is false |
 | `api_key_token_prefix` | `'amcp_'` | Prefix that marks a bearer token as an API key. Cannot be blank |
-| `default_client_name` | `'MCP Client'` | Name given to a dynamically registered client that sends no `client_name` |
+| `default_client_name` | `'MCP Client'` | Name given to a dynamically registered client that sends no `client_name`. Inert when `oauth` is false |
 | `sidekiq_stats_provider` | `nil` | Object answering `counts`, `total_counts`, `queues`, `stats_cleared_at`; a class name String or a Proc is resolved lazily so autoloaded providers can be named in an initializer |
 | `admin_route_namespace` | `:admin` | Namespace used to build record URLs |
 | `admin_url_options` | `{}` | Options passed to `polymorphic_url`; when no `:host` is given, host, protocol and port are taken from `admin_origin` |
@@ -269,7 +272,8 @@ end
 `draw_mcp_origin` adds `/.well-known/oauth-protected-resource`,
 `/.well-known/oauth-authorization-server`, `POST /oauth/register`, `POST /oauth/token` and the
 JSON-RPC endpoint at `/`. `draw_admin_origin` adds `GET` and `POST /mcp/oauth/authorize`; pass
-`path:` to move it.
+`path:` to move it. With `config.oauth` false the OAuth routes are left out of
+both — see [OAuth](#oauth).
 
 Both sets have to sit at the root of their origin. The metadata documents the engine publishes name
 the token, registration and JSON-RPC endpoints as absolute paths — `/oauth/token`, `/oauth/register`,
@@ -333,7 +337,7 @@ matching, and the holders have to be issued new ones.
 
 **OAuth 2.1.** Clients register themselves, send the user to the consent screen on the admin origin,
 and exchange the code with PKCE. Access tokens last a week, authorization codes ten minutes, and
-refreshing revokes the old token.
+refreshing revokes the old token. See [OAuth](#oauth) for turning it off.
 
 ### Identity fallback
 
@@ -375,6 +379,61 @@ re-checks the person, not just the credential.
 The JSON-RPC endpoint authenticates by bearer token only and never reads the session cookie: hosts
 routinely share a session across sibling subdomains, and a browser signed into the admin UI must not
 thereby be able to drive the protocol endpoint.
+
+## OAuth
+
+The engine ships a complete OAuth 2.1 authorization server: Dynamic Client Registration, a consent
+screen, PKCE, refresh tokens, and the two discovery documents clients read to find all of it. That is
+the default, and for most hosts it is the whole story.
+
+It does not fit a deployment where something in front of the application already does this. Cloudflare
+Access managed OAuth, for instance, serves both discovery documents at its own edge and points
+clients at `<team>.cloudflareaccess.com` for authorization, token, registration and revocation — the
+engine's endpoints are then unreachable, and advertising them only gives clients a second, broken
+answer. Turn the server off:
+
+```ruby
+Administrate::MCP.configure do |c|
+  c.oauth = false
+end
+```
+
+`Routes.draw_mcp_origin` then draws the JSON-RPC endpoint and nothing else — no `/.well-known/*`, no
+`/oauth/register`, no `/oauth/token` — and `Routes.draw_admin_origin` becomes a no-op, so you can
+leave both calls where they are. API keys keep working. An OAuth token presented while the server is
+off is simply a bearer the engine does not recognise, and goes to `identity_fallback` like any other.
+
+The models and migrations still ship, and the tables are never queried while `oauth` is false, so a
+host that never ran that migration boots and serves normally. `default_client_name` and
+`allow_localhost_redirects` have nothing to act on and are inert.
+
+### Cloudflare Access
+
+`Administrate::MCP::CloudflareAccess` verifies the assertion Access attaches to every request it lets
+through. It answers `call(request)`, so it can be assigned to `identity_fallback` directly:
+
+```ruby
+Administrate::MCP.configure do |c|
+  c.oauth = false
+  c.identity_fallback = Administrate::MCP::CloudflareAccess.new(
+    team_domain: ENV.fetch('CLOUDFLARE_ACCESS_TEAM_DOMAIN'),
+    audience: ENV.fetch('CLOUDFLARE_ACCESS_MCP_AUD'),
+    find_admin: ->(email) { Administrator.find_by(email:) },
+    scopes_for: ->(admin) { admin.mcp_write_access? ? ['write'] : [] }
+  )
+end
+```
+
+It reads the `Cf-Access-Jwt-Assertion` header, verifies the RS256 signature against the JWKS at
+`<team_domain>/cdn-cgi/access/certs` (cached an hour, refetched once when a key id is unknown, which
+is what a key rotation looks like), and checks the issuer and audience. `find_admin` receives the
+lowercased email and `scopes_for` the admin it returned; returning no admin raises
+`ExternalIdentityError` with `X-Auth-Error: cloudflare_access`. Leave `team_domain` or `audience`
+blank and it returns nil without calling Cloudflare, so it is safe to configure everywhere and enable
+per environment.
+
+Access must be in front of the JSON-RPC origin for this to mean anything: the assertion is only
+trustworthy because nothing can reach the application without passing through Access.
 
 ## Rate limiting
 
@@ -485,6 +544,14 @@ reports `more?`; schedule it however your app schedules work.
   engine's own credentials have had their turn and only when none of them matched, so a host can add
   an external identity source — an edge proxy, an SSO assertion — without weakening the tokens the
   engine issues.
+- **The OAuth server is optional, not removable.** A host in front of an edge proxy that runs its own
+  authorization flow sets `oauth = false` and the engine stops advertising and serving endpoints that
+  cannot work there. Everyone else gets a full OAuth 2.1 server with no setup, which is what makes
+  the gem usable on its own.
+- **`CloudflareAccess` takes its collaborators in its constructor.** The team domain, audience, admin
+  lookup and scope decision are all arguments rather than environment variables or model calls, so
+  the class knows nothing about any particular application and can be built twice with different
+  audiences in the same process.
 - **Feedback services are plain objects.** `ReportImprovement` and `CleanOldFeedbacks` return a
   result struct and do no scheduling; the host decides how and when to run them.
 
