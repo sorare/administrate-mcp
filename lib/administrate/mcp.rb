@@ -9,6 +9,7 @@ require 'administrate/mcp/loopback_uri'
 require 'administrate/mcp/configuration'
 require 'administrate/mcp/routes'
 require 'administrate/mcp/rack_attack'
+require 'administrate/mcp/cloudflare_access'
 require 'administrate/mcp/engine'
 
 module Administrate

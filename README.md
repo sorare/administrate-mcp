@@ -410,7 +410,9 @@ host that never ran that migration boots and serves normally. `default_client_na
 ### Cloudflare Access
 
 `Administrate::MCP::CloudflareAccess` verifies the assertion Access attaches to every request it lets
-through. It answers `call(request)`, so it can be assigned to `identity_fallback` directly:
+through. It answers `call(request)`, so it can be assigned to `identity_fallback` directly, in the
+same `config/initializers/administrate_mcp.rb` as the rest of your configuration — no `to_prepare`
+wrapper and no deferred reference, the class is requirable the moment the gem is:
 
 ```ruby
 Administrate::MCP.configure do |c|
@@ -563,7 +565,9 @@ reports `more?`; schedule it however your app schedules work.
   the class knows nothing about any particular application and can be built twice with different
   audiences in the same process. The two settings resolve on every call rather than at construction,
   because the object is built in an initializer and the environment it reads is not always readable
-  there.
+  there. The class itself ships in `lib` rather than `app`, alongside `Routes` and `RackAttack`, for
+  the same reason: an initializer has to be able to name it, and autoloading is not available that
+  early.
 - **Feedback services are plain objects.** `ReportImprovement` and `CleanOldFeedbacks` return a
   result struct and do no scheduling; the host decides how and when to run them.
 

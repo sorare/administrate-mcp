@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'active_support/core_ext/numeric/time'
+require 'active_support/core_ext/object/blank'
 require 'jwt'
 require 'net/http'
 
@@ -10,6 +12,10 @@ module Administrate
     # Clients using Access managed OAuth never reach an MCP server's own OAuth flow: Access resolves
     # their token at its own edge and forwards the caller's identity in this header instead. Build
     # one of these and hand it to `config.identity_fallback` — it answers `call(request)`.
+    #
+    # This ships in `lib` rather than `app` so a host initializer can name the constant: autoloading
+    # is not available while initializers run. Nothing outside a method body names a constant the
+    # engine autoloads, so `Authentication` still resolves at call time.
     class CloudflareAccess
       ASSERTION_HEADER = 'Cf-Access-Jwt-Assertion'
       ALGORITHM = 'RS256'
