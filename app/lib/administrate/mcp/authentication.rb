@@ -88,7 +88,7 @@ module Administrate
           if token.present?
             return active!(authenticate_api_key!(token)) if token.start_with?(ApiKey.token_prefix_value)
 
-            oauth_token = OAuthAccessToken.find_by(token:)
+            oauth_token = find_oauth_token(token)
             return active!(authenticate_oauth_token!(oauth_token)) if oauth_token
           end
 
@@ -99,6 +99,14 @@ module Administrate
         end
 
         private
+
+        # With the OAuth server off the table may not even exist, so it is never queried and an
+        # OAuth token is just another bearer the engine does not recognise.
+        def find_oauth_token(token)
+          return nil unless Administrate::MCP.config.oauth
+
+          OAuthAccessToken.find_by(token:)
+        end
 
         def authenticate_api_key!(token)
           api_key = ApiKey.authenticate(token)
