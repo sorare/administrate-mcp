@@ -15,11 +15,11 @@ Gem::Specification.new do |spec|
   spec.license = 'MIT'
   spec.required_ruby_version = '>= 3.2'
 
-  spec.metadata['homepage_uri'] = spec.homepage
   spec.metadata['source_code_uri'] = spec.homepage
+  spec.metadata['changelog_uri'] = 'https://github.com/sorare/administrate-mcp/blob/master/CHANGELOG.md'
   spec.metadata['rubygems_mfa_required'] = 'true'
 
-  spec.files = Dir['{app,config,db,lib}/**/*', 'LICENSE.txt', 'README.md']
+  spec.files = Dir['{app,config,db,docs,lib}/**/*', 'CHANGELOG.md', 'LICENSE.txt', 'README.md']
   spec.require_paths = ['lib']
 
   # FastSearch subclasses Administrate::Search and uses methods that class treats as internal.
