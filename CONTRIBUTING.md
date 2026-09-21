@@ -122,8 +122,22 @@ To cut a release:
 4. Tag the merge commit `vX.Y.Z` and push the tag. The workflow checks that the tag matches the
    version file, builds the gem and pushes it.
 
-One-time setup, done once by a RubyGems account owner: on rubygems.org, add a trusted publisher for
-this gem with repository owner `sorare`, repository `administrate-mcp`, workflow `release.yml` and
-environment `rubygems`. For the very first release, when the gem name does not exist yet on
-RubyGems, register it as a pending trusted publisher instead, or push the first version by hand
-with `gem push` from an account with multi-factor authentication enabled.
+One-time setup, done once by a RubyGems account owner. Because the gem does not exist on RubyGems
+yet, the first registration is a pending trusted publisher, created from the RubyGems profile rather
+than from a gem page, at https://rubygems.org/profile/oidc/pending_trusted_publishers. Its fields are:
+
+| Field | Value |
+| --- | --- |
+| RubyGem name | `administrate-mcp` |
+| Repository owner | `sorare` |
+| Repository name | `administrate-mcp` |
+| Workflow filename | `release.yml` |
+| Environment | `release` |
+
+The environment has to match the `environment:` in `.github/workflows/release.yml` exactly. Create it
+in the repository under Settings, Environments, so you can add a required reviewer and limit who can
+publish. After the first release the same entry appears on the gem's own trusted publishers page.
+
+If the pending registration is not available, the fallback is to push the first version by hand with
+`gem build` and `gem push` from an account with multi-factor authentication enabled, then register
+the trusted publisher on the gem page for later releases.
