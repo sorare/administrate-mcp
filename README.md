@@ -23,10 +23,8 @@ permissions the admin UI enforces.
 - [Dashboard declarations](#dashboard-declarations)
 - [Authentication](#authentication)
 - [OAuth](#oauth)
-- [Cloudflare Access](#cloudflare-access)
 - [Rate limiting](#rate-limiting)
 - [Admin integration](#admin-integration)
-- [Design decisions](#design-decisions)
 - [Known limitations](#known-limitations)
 - [Development](#development)
 - [Security](#security)
@@ -132,8 +130,8 @@ returns columns, rows and pagination metadata built from the dashboard's `COLLEC
 
 - Ruby 3.2 or newer.
 - Rails 8.1 or newer.
-- Administrate 1.0.0.beta3 or newer, below 2.0 (pinned; see [Design decisions](#design-decisions)
-  for why).
+- Administrate 1.0.0.beta3 or newer, below 2.0 (the search implementation calls methods
+  `Administrate::Search` treats as internal, see [Search](docs/dashboards.md#search)).
 - PostgreSQL. The migrations create uuid primary keys defaulted with `gen_random_uuid()` and store
   the OAuth `redirect_uris` and `grant_types` as array columns.
 
@@ -212,18 +210,14 @@ readable fields and writable actions: [docs/dashboards.md](docs/dashboards.md).
 
 How a request is authenticated (API key, then OAuth token, then `identity_fallback`), how to issue
 and rotate API keys, and the `identity_fallback` recipe for an identity resolved in front of the
-application: [docs/authentication.md](docs/authentication.md).
+application: [docs/authentication.md](docs/authentication.md). A Cloudflare Access verifier ships
+with the gem for hosts that run edge-managed OAuth in front of the application:
+[docs/authentication.md#identity-fallback](docs/authentication.md#identity-fallback).
 
 ## OAuth
 
 The built-in OAuth 2.1 server, what turning it off with `c.oauth = false` changes, and when a host
 should: [docs/oauth.md](docs/oauth.md).
-
-## Cloudflare Access
-
-`Administrate::MCP::CloudflareAccess`, the verifier that plugs into `identity_fallback` for hosts
-that put Cloudflare Access managed OAuth in front of the application, including why it fails closed
-on a blank team domain or audience: [docs/oauth.md#cloudflare-access](docs/oauth.md#cloudflare-access).
 
 ## Rate limiting
 
@@ -234,11 +228,6 @@ for you: [docs/oauth.md#rate-limiting](docs/oauth.md#rate-limiting).
 
 Exposing the engine's own tables (API keys, feedback) in your host admin, customising the consent
 screen, and cleaning up old feedback: [docs/admin-integration.md](docs/admin-integration.md).
-
-## Design decisions
-
-Why the engine is shaped the way it is: configuration over subclassing, the `admin` keyword, file
-and class naming under Zeitwerk, and more: [docs/design-decisions.md](docs/design-decisions.md).
 
 ## Known limitations
 

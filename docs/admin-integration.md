@@ -50,3 +50,7 @@ has `@application`, `@redirect_uri`, `@redirect_host` and `@scopes`.
 
 `Administrate::MCP::CleanOldFeedbacks.call(till: 2.months.ago)` deletes one batch of 10,000 and
 reports `more?`; schedule it however your app schedules work.
+
+`ReportImprovement`, which backs the `report_mcp_improvement` tool, is a plain object in the same
+style: it returns a result struct and does no scheduling of its own. Both services leave the decision
+of how and when to run them to the host application.

@@ -37,3 +37,14 @@ base class, is not applied to every resource. A subclass that wants one declares
   authorization predicate (`refund?` by default, or `predicate:`) on the loaded record. The block
   receives `record:`, `admin:` and `params:`; a result answering `success? == false` is reported as
   an error.
+
+## Search
+
+The `admin_resource_list` tool's `query` argument matches exactly by default, so searching for an id
+or a slug does not also match every row that merely contains it. `*` is the only wildcard. Every
+comparison casts the column to text first, so a search term matched against a uuid `id` column
+returns no rows instead of raising an error.
+
+Search is implemented by `FastSearch`, a subclass of `Administrate::Search` that calls methods that
+class treats as internal (`search_attributes`, `searchable_fields`, `query_table_name`,
+`column_to_query`). That is why the gemspec pins `administrate` below 2.0.

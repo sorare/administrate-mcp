@@ -168,7 +168,7 @@ end
 | `api_key_token_prefix`      | `'amcp_'`                          | Prefix that marks a bearer token as an API key. Cannot be blank                                                                                                                  |
 | `default_client_name`       | `'MCP Client'`                     | Name given to a dynamically registered client that sends no `client_name`. Inert when `oauth` is false                                                                           |
 | `sidekiq_stats_provider`    | `nil`                              | Object answering `counts`, `total_counts`, `queues`, `stats_cleared_at`; a class name String or a Proc is resolved lazily so autoloaded providers can be named in an initializer |
-| `admin_route_namespace`     | `:admin`                           | Namespace used to build record URLs                                                                                                                                              |
+| `admin_route_namespace`     | `:admin`                           | Namespace record URLs are built from                                                                                                                                             |
 | `admin_url_options`         | `{}`                               | Options passed to `polymorphic_url`; when no `:host` is given, host, protocol and port are taken from `admin_origin`                                                             |
 | `skipped_field_classes`     | Password                           | Field class names never serialized                                                                                                                                               |
 | `has_many_field_classes`    | HasMany                            | Field class names treated as expandable collections                                                                                                                              |
@@ -184,6 +184,10 @@ Both inherit `authorize_roles!` from `Authorization::Base`: a tool's `requires_r
 `default_required_roles`) is checked with `admin.can_access?(*roles)`. An admin class that does not
 answer `can_access?` raises `Administrate::MCP::ConfigurationError` rather than letting the call
 through. Clear `default_required_roles`, give the class the method, or override `authorize_roles!`.
+
+`report_mcp_improvement` requires no role: reporting that a tool description or result is wrong is
+not a privileged action, so it stays open to any authenticated admin regardless of
+`default_required_roles`.
 
 Write your own by answering three methods:
 
@@ -211,3 +215,6 @@ end
 
 A field class that answers `mcp_value(record, attr_name)` and is not registered is asked for its own
 value. An unregistered field class with no `mcp_value` falls back to its raw value.
+
+`Field::Text` and `Field::Url`, along with every other field class registered as `:scalar`,
+serialize a nil value as `null` rather than an empty string.

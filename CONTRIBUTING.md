@@ -79,7 +79,7 @@ to report one.
 ## Design constraints
 
 These are non-negotiable. A pull request that violates one of them will be asked to change,
-whatever else it does well. See the README's "Design decisions" section for the full reasoning.
+whatever else it does well.
 
 - **The engine stays host-agnostic.** It must not reference a constant belonging to a specific
   host application, at load time or at run time. Field serializers are keyed by class name
@@ -100,6 +100,12 @@ whatever else it does well. See the README's "Design decisions" section for the 
 - **No foreign key on `admin_id`.** Hosts disagree about which table their admins live in, and
   some forbid cross-table constraints outright. The column stays indexed, but referential
   integrity there is the host's responsibility, not the engine's.
+- **Routes are drawn as Rack lambdas, not `"controller#action"` strings.** Rails resolves those
+  strings through the global inflections, which would reintroduce the acronym problem the file
+  naming rule above avoids.
+- **The only inflection the engine registers is `mcp` to `MCP`, and it registers it on the
+  engine's own autoloader, not in `ActiveSupport::Inflector`.** Registering it globally would
+  change how the host application's own `camelize` behaves.
 
 ## Releasing
 
@@ -121,4 +127,3 @@ this gem with repository owner `sorare`, repository `administrate-mcp`, workflow
 environment `rubygems`. For the very first release, when the gem name does not exist yet on
 RubyGems, register it as a pending trusted publisher instead, or push the first version by hand
 with `gem push` from an account with multi-factor authentication enabled.
-

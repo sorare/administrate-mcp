@@ -45,7 +45,7 @@ misconfigured host is a host-side issue, not a vulnerability in the engine.
 - The JSON-RPC endpoint authenticates by bearer token only. It never reads the session cookie, so a
   browser signed into a host's admin UI cannot drive the protocol endpoint through that session.
 - API keys are stored as a SHA-256 digest (`token_digest`) plus a stored prefix (`token_prefix`)
-  used to route the token to the right check. The plaintext is never stored and is not recoverable.
+  that routes the token to the right check. The plaintext is never stored and is not recoverable.
 - OAuth access and refresh tokens are stored in plaintext in
   `administrate_mcp_oauth_access_tokens`. This is a known limitation, not an oversight: anyone who
   can read that table can act as any admin who has authorized a client. Revoking a token (`revoke!`)
