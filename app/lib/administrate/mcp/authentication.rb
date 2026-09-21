@@ -105,7 +105,7 @@ module Administrate
         def find_oauth_token(token)
           return nil unless Administrate::MCP.config.oauth
 
-          OAuthAccessToken.find_by(token:)
+          OAuthAccessToken.find_by_token(token)
         end
 
         def authenticate_api_key!(token)

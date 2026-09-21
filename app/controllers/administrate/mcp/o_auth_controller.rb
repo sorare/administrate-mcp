@@ -68,7 +68,7 @@ module Administrate
         end
 
         grant = create_access_grant(application, redirect_uri)
-        redirect_to callback_url(redirect_uri, code: grant.token), allow_other_host: true
+        redirect_to callback_url(redirect_uri, code: grant.plaintext_token), allow_other_host: true
       end
 
       def token
@@ -122,10 +122,9 @@ module Administrate
       end
 
       def create_access_grant(application, redirect_uri)
-        OAuthAccessGrant.create!(
+        OAuthAccessGrant.issue(
           admin: current_admin,
           application:,
-          token: OAuthAccessGrant.generate_token,
           expires_in: OAuthAccessGrant::DEFAULT_EXPIRES_IN,
           redirect_uri:,
           code_challenge: params[:code_challenge],

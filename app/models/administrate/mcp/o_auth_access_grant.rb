@@ -11,13 +11,48 @@ module Administrate
       belongs_to_admin
       belongs_to :application, class_name: 'Administrate::MCP::OAuthApplication', inverse_of: :access_grants
 
-      validates :token, presence: true, uniqueness: true
+      validates :token_digest, presence: true, uniqueness: true
       validates :redirect_uri, presence: true
       validates :code_challenge, presence: true
       validates :expires_in, presence: true
 
-      def self.generate_token
-        SecureRandom.hex(32)
+      attr_reader :plaintext_token
+
+      class << self
+        def generate_token
+          SecureRandom.hex(32)
+        end
+
+        def digest(plaintext)
+          Digest::SHA256.hexdigest(plaintext)
+        end
+
+        def find_by_token(plaintext)
+          find_by(token_digest: digest(plaintext))
+        end
+
+        def issue(
+          admin:, application:, redirect_uri:, code_challenge:, code_challenge_method:, scopes:,
+          expires_in: DEFAULT_EXPIRES_IN
+        )
+          plaintext_token = generate_token
+
+          create!(
+            admin:,
+            application:,
+            token_digest: digest(plaintext_token),
+            redirect_uri:,
+            code_challenge:,
+            code_challenge_method:,
+            scopes:,
+            expires_in:
+          ).tap { |grant| grant.instance_variable_set(:@plaintext_token, plaintext_token) }
+        end
+      end
+
+      def reload(...)
+        @plaintext_token = nil
+        super
       end
 
       def expired?

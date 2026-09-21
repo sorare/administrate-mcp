@@ -41,7 +41,7 @@ module Administrate
       end
 
       def exchange_refresh_token(refresh_token:)
-        old_token = OAuthAccessToken.active.find_by(refresh_token:)
+        old_token = OAuthAccessToken.active.find_by_refresh_token(refresh_token)
         return error_result('invalid_grant') unless old_token && !old_token.expired?
 
         old_token.revoke!
@@ -71,7 +71,7 @@ module Administrate
       end
 
       def find_valid_grant(code)
-        grant = OAuthAccessGrant.find_by(token: code)
+        grant = OAuthAccessGrant.find_by_token(code)
         grant if grant && !grant.revoked? && !grant.expired?
       end
 
@@ -80,24 +80,17 @@ module Administrate
       end
 
       def issue_access_token(admin, application, scopes)
-        OAuthAccessToken.create!(
-          admin:,
-          application:,
-          token: OAuthAccessToken.generate_token,
-          refresh_token: OAuthAccessToken.generate_refresh_token,
-          expires_in: OAuthAccessToken::DEFAULT_EXPIRES_IN,
-          scopes:
-        )
+        OAuthAccessToken.issue(admin:, application:, scopes:, expires_in: OAuthAccessToken::DEFAULT_EXPIRES_IN)
       end
 
       def success_result(access_token)
         Result.new(
           success?: true,
           data: {
-            access_token: access_token.token,
+            access_token: access_token.plaintext_token,
             token_type: 'bearer',
             expires_in: access_token.expires_in,
-            refresh_token: access_token.refresh_token
+            refresh_token: access_token.plaintext_refresh_token
           }
         )
       end

@@ -60,7 +60,7 @@ RSpec.describe Administrate::MCP::Authentication do
 
       context 'with a valid OAuth access token' do
         let(:oauth_token) { create(:administrate_mcp_oauth_access_token, admin:, scopes: 'write') }
-        let(:headers) { { 'Authorization' => "Bearer #{oauth_token.token}" } }
+        let(:headers) { { 'Authorization' => "Bearer #{oauth_token.plaintext_token}" } }
 
         it 'keeps using the OAuth token' do
           expect(described_class.authenticate!(request).admin).to eq(admin)
@@ -79,7 +79,7 @@ RSpec.describe Administrate::MCP::Authentication do
 
       context 'with a revoked OAuth access token' do
         let(:oauth_token) { create(:administrate_mcp_oauth_access_token, admin:, revoked_at: Time.current) }
-        let(:headers) { { 'Authorization' => "Bearer #{oauth_token.token}" } }
+        let(:headers) { { 'Authorization' => "Bearer #{oauth_token.plaintext_token}" } }
 
         it 'still raises rather than falling back' do
           expect { described_class.authenticate!(request) }.to raise_error(
@@ -133,7 +133,7 @@ RSpec.describe Administrate::MCP::Authentication do
 
       context 'with an OAuth access token' do
         let(:oauth_token) { create(:administrate_mcp_oauth_access_token, admin:) }
-        let(:headers) { { 'Authorization' => "Bearer #{oauth_token.token}" } }
+        let(:headers) { { 'Authorization' => "Bearer #{oauth_token.plaintext_token}" } }
 
         it 'raises an InactiveAdminError' do
           expect { described_class.authenticate!(request) }.to raise_error(described_class::InactiveAdminError)
@@ -178,7 +178,7 @@ RSpec.describe Administrate::MCP::Authentication do
 
     context 'with a valid OAuth access token' do
       let(:oauth_token) { create(:administrate_mcp_oauth_access_token, admin:, scopes: 'write') }
-      let(:headers) { { 'Authorization' => "Bearer #{oauth_token.token}" } }
+      let(:headers) { { 'Authorization' => "Bearer #{oauth_token.plaintext_token}" } }
 
       it 'returns the admin with the token scopes' do
         identity = described_class.authenticate!(request)
@@ -190,7 +190,7 @@ RSpec.describe Administrate::MCP::Authentication do
 
     context 'with an expired OAuth access token' do
       let(:oauth_token) { create(:administrate_mcp_oauth_access_token, admin:, created_at: 2.weeks.ago) }
-      let(:headers) { { 'Authorization' => "Bearer #{oauth_token.token}" } }
+      let(:headers) { { 'Authorization' => "Bearer #{oauth_token.plaintext_token}" } }
 
       it 'raises an OAuthTokenError' do
         expect { described_class.authenticate!(request) }.to raise_error(
@@ -202,7 +202,7 @@ RSpec.describe Administrate::MCP::Authentication do
 
     context 'with a revoked OAuth access token' do
       let(:oauth_token) { create(:administrate_mcp_oauth_access_token, admin:, revoked_at: Time.current) }
-      let(:headers) { { 'Authorization' => "Bearer #{oauth_token.token}" } }
+      let(:headers) { { 'Authorization' => "Bearer #{oauth_token.plaintext_token}" } }
 
       it 'raises an OAuthTokenError' do
         expect { described_class.authenticate!(request) }.to raise_error(

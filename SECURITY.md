@@ -46,12 +46,13 @@ misconfigured host is a host-side issue, not a vulnerability in the engine.
   browser signed into a host's admin UI cannot drive the protocol endpoint through that session.
 - API keys are stored as a SHA-256 digest (`token_digest`) plus a stored prefix (`token_prefix`)
   that routes the token to the right check. The plaintext is never stored and is not recoverable.
-- OAuth access and refresh tokens are stored in plaintext in
-  `administrate_mcp_oauth_access_tokens`. This is a known limitation, not an oversight: anyone who
-  can read that table can act as any admin who has authorized a client. Revoking a token (`revoke!`)
-  is the remedy for a specific token; access tokens also expire after a week. The OAuth server can
-  be turned off entirely with `config.oauth = false`, for hosts that run their own authorization
-  flow in front of the application.
+- OAuth access tokens, refresh tokens and authorization codes are stored the same way: as SHA-256
+  digests (`token_digest`, `refresh_token_digest`), never in plaintext. The plaintext is handed to
+  the caller once, when it is issued, and is not recoverable from the database afterwards. Revoking
+  a token (`revoke!`) is the remedy for a specific token; access tokens also expire after a week and
+  authorization codes after ten minutes. The OAuth server can be turned off entirely with
+  `config.oauth = false`, for hosts that run their own authorization flow in front of the
+  application.
 - `Administrate::MCP::CloudflareAccess` refuses every assertion when `team_domain` or `audience`
   resolves to blank. It does not fall through to accepting an unverified assertion and does not
   skip the audience check in that case; it returns no identity.
