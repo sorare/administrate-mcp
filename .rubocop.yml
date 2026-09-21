@@ -29,6 +29,14 @@ Metrics/ParameterLists:
 Rails/Output:
   Enabled: false
 
+# find_by_token and find_by_refresh_token look like Rails dynamic finders but are not: they hash
+# the plaintext argument and look it up by digest, so there is no `token` or `refresh_token`
+# column for a plain find_by to use.
+Rails/DynamicFindBy:
+  Whitelist:
+    - find_by_token
+    - find_by_refresh_token
+
 # The engine's controllers must not inherit from the host's ApplicationController: the JSON-RPC
 # endpoint takes no session, and the OAuth controller must render without the host's layout.
 Rails/ApplicationController:

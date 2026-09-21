@@ -45,3 +45,12 @@ Nothing has been published to RubyGems yet.
   `administrate_mcp_oauth_applications`, `administrate_mcp_oauth_access_grants` and
   `administrate_mcp_oauth_access_tokens`, all using uuid primary keys, an indexed but
   unconstrained uuid `admin_id`, and array columns for `redirect_uris` and `grant_types`.
+
+### Security
+
+- OAuth access tokens, refresh tokens and authorization codes are now stored as SHA-256 digests
+  (`token_digest`, `refresh_token_digest`) instead of plaintext, matching how API keys were already
+  stored. The plaintext is handed to the caller once, when it is issued, and is not recoverable
+  afterwards. This changes the schema of the authorization tables migration. The gem has not been
+  published yet, so anyone who already installed its migrations must reinstall them rather than
+  migrate incrementally.

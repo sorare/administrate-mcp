@@ -358,7 +358,7 @@ RSpec.describe Administrate::MCP::OAuthController do
         post '/oauth/token',
              params: {
                grant_type: 'authorization_code',
-               code: grant.token,
+               code: grant.plaintext_token,
                code_verifier: verifier,
                redirect_uri: grant.redirect_uri
              }
@@ -372,7 +372,8 @@ RSpec.describe Administrate::MCP::OAuthController do
       end
 
       it 'revokes the grant after use' do
-        post '/oauth/token', params: { grant_type: 'authorization_code', code: grant.token, code_verifier: verifier }
+        post '/oauth/token',
+             params: { grant_type: 'authorization_code', code: grant.plaintext_token, code_verifier: verifier }
 
         expect(grant.reload).to be_revoked
       end
@@ -381,7 +382,7 @@ RSpec.describe Administrate::MCP::OAuthController do
         post '/oauth/token',
              params: {
                grant_type: 'authorization_code',
-               code: grant.token,
+               code: grant.plaintext_token,
                code_verifier: verifier,
                redirect_uri: 'https://evil.com/callback'
              }
@@ -393,7 +394,9 @@ RSpec.describe Administrate::MCP::OAuthController do
 
       it 'refuses an invalid code_verifier' do
         post '/oauth/token',
-             params: { grant_type: 'authorization_code', code: grant.token, code_verifier: 'wrong_verifier' }
+             params: {
+               grant_type: 'authorization_code', code: grant.plaintext_token, code_verifier: 'wrong_verifier'
+             }
 
         expect(response).to have_http_status(:bad_request)
         expect(response.parsed_body['error']).to eq('invalid_grant')
@@ -405,7 +408,8 @@ RSpec.describe Administrate::MCP::OAuthController do
         end
 
         it 'refuses the exchange' do
-          post '/oauth/token', params: { grant_type: 'authorization_code', code: grant.token, code_verifier: verifier }
+          post '/oauth/token',
+               params: { grant_type: 'authorization_code', code: grant.plaintext_token, code_verifier: verifier }
 
           expect(response).to have_http_status(:bad_request)
         end
@@ -415,7 +419,8 @@ RSpec.describe Administrate::MCP::OAuthController do
         before { grant.revoke! }
 
         it 'refuses the exchange' do
-          post '/oauth/token', params: { grant_type: 'authorization_code', code: grant.token, code_verifier: verifier }
+          post '/oauth/token',
+               params: { grant_type: 'authorization_code', code: grant.plaintext_token, code_verifier: verifier }
 
           expect(response).to have_http_status(:bad_request)
         end
@@ -426,15 +431,17 @@ RSpec.describe Administrate::MCP::OAuthController do
       let!(:access_token) { create(:administrate_mcp_oauth_access_token) }
 
       it 'issues a new token pair' do
-        post '/oauth/token', params: { grant_type: 'refresh_token', refresh_token: access_token.refresh_token }
+        post '/oauth/token',
+             params: { grant_type: 'refresh_token', refresh_token: access_token.plaintext_refresh_token }
 
         expect(response).to have_http_status(:ok)
         expect(response.parsed_body['access_token']).to be_present
-        expect(response.parsed_body['access_token']).not_to eq(access_token.token)
+        expect(response.parsed_body['access_token']).not_to eq(access_token.plaintext_token)
       end
 
       it 'revokes the old token' do
-        post '/oauth/token', params: { grant_type: 'refresh_token', refresh_token: access_token.refresh_token }
+        post '/oauth/token',
+             params: { grant_type: 'refresh_token', refresh_token: access_token.plaintext_refresh_token }
 
         expect(access_token.reload).to be_revoked
       end
@@ -443,7 +450,8 @@ RSpec.describe Administrate::MCP::OAuthController do
         before { access_token.revoke! }
 
         it 'refuses the exchange' do
-          post '/oauth/token', params: { grant_type: 'refresh_token', refresh_token: access_token.refresh_token }
+          post '/oauth/token',
+               params: { grant_type: 'refresh_token', refresh_token: access_token.plaintext_refresh_token }
 
           expect(response).to have_http_status(:bad_request)
         end

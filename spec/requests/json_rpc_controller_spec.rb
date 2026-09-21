@@ -84,7 +84,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       it 'authenticates successfully' do
         post '/',
              params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
-             headers: headers.merge('Authorization' => "Bearer #{oauth_token.token}")
+             headers: headers.merge('Authorization' => "Bearer #{oauth_token.plaintext_token}")
 
         expect(response).to have_http_status(:ok)
       end
@@ -96,7 +96,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       it 'returns 401 with X-Auth-Error: oauth' do
         post '/',
              params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
-             headers: headers.merge('Authorization' => "Bearer #{oauth_token.token}")
+             headers: headers.merge('Authorization' => "Bearer #{oauth_token.plaintext_token}")
 
         expect(response).to have_http_status(:unauthorized)
         expect(response.parsed_body.dig('error', 'message')).to eq('Token has expired')
@@ -109,7 +109,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       it 'returns 401 with X-Auth-Error: oauth' do
         post '/',
              params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
-             headers: headers.merge('Authorization' => "Bearer #{oauth_token.token}")
+             headers: headers.merge('Authorization' => "Bearer #{oauth_token.plaintext_token}")
 
         expect(response).to have_http_status(:unauthorized)
         expect(response.headers['X-Auth-Error']).to eq('oauth')
@@ -180,7 +180,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
 
         post '/',
              params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,
-             headers: headers.merge('Authorization' => "Bearer #{oauth_token.token}")
+             headers: headers.merge('Authorization' => "Bearer #{oauth_token.plaintext_token}")
 
         expect(response).to have_http_status(:unauthorized)
         expect(response.headers['X-Auth-Error']).to eq('inactive_admin')

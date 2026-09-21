@@ -25,7 +25,6 @@ permissions the admin UI enforces.
 - [OAuth](#oauth)
 - [Rate limiting](#rate-limiting)
 - [Admin integration](#admin-integration)
-- [Known limitations](#known-limitations)
 - [Development](#development)
 - [Security](#security)
 - [Contributing](#contributing)
@@ -229,14 +228,6 @@ for you: [docs/oauth.md#rate-limiting](docs/oauth.md#rate-limiting).
 Exposing the engine's own tables (API keys, feedback) in your host admin, customising the consent
 screen, and cleaning up old feedback: [docs/admin-integration.md](docs/admin-integration.md).
 
-## Known limitations
-
-- **OAuth access and refresh tokens are stored in plaintext.** API keys are stored only as a
-  SHA-256 digest, but `administrate_mcp_oauth_access_tokens.token` and `.refresh_token` hold the
-  values themselves, so anyone who can read that table can act as any admin who has authorized a
-  client. Treat it as you would a credentials table. A digest scheme is planned; until then,
-  revoking a token (`revoke!`) is the remedy, and access tokens expire after a week.
-
 ## Development
 
 ```sh
@@ -254,13 +245,12 @@ variables.
 See [SECURITY.md](SECURITY.md) for how to report a vulnerability.
 
 The JSON-RPC endpoint authenticates by bearer token only. It never falls back to a session cookie,
-so a browser signed into the admin UI cannot drive the protocol endpoint. API keys are stored as a
-SHA-256 digest, never in plaintext. OAuth access and refresh tokens are stored in plaintext; treat
-that table as a credentials table (see [Known limitations](#known-limitations)). The Cloudflare
-Access verifier fails closed: a blank team domain or audience makes it refuse every request rather
-than admit an unverified one. A credential does not outlive the admin who holds it, because
-`admin_active` is checked on every call, whether the credential is an API key, an OAuth token, or an
-identity resolved through `identity_fallback`.
+so a browser signed into the admin UI cannot drive the protocol endpoint. API keys, OAuth access and
+refresh tokens, and OAuth authorization codes are all stored as SHA-256 digests, never in plaintext.
+The Cloudflare Access verifier fails closed: a blank team domain or audience makes it refuse every
+request rather than admit an unverified one. A credential does not outlive the admin who holds it,
+because `admin_active` is checked on every call, whether the credential is an API key, an OAuth
+token, or an identity resolved through `identity_fallback`.
 
 ## Contributing
 

@@ -17,7 +17,7 @@ class CreateAdministrateModelContextProtocolAuthorizationTables < ActiveRecord::
     create_table :administrate_mcp_oauth_access_grants, id: :uuid, if_not_exists: true do |t|
       t.uuid :admin_id, null: false
       t.uuid :application_id, null: false
-      t.string :token, null: false
+      t.string :token_digest, null: false
       t.integer :expires_in, null: false
       t.text :redirect_uri, null: false
       t.string :scopes, default: ''
@@ -30,13 +30,13 @@ class CreateAdministrateModelContextProtocolAuthorizationTables < ActiveRecord::
 
     add_index :administrate_mcp_oauth_access_grants, :admin_id, if_not_exists: true
     add_index :administrate_mcp_oauth_access_grants, :application_id, if_not_exists: true
-    add_index :administrate_mcp_oauth_access_grants, :token, unique: true, if_not_exists: true
+    add_index :administrate_mcp_oauth_access_grants, :token_digest, unique: true, if_not_exists: true
 
     create_table :administrate_mcp_oauth_access_tokens, id: :uuid, if_not_exists: true do |t|
       t.uuid :admin_id, null: false
       t.uuid :application_id, null: false
-      t.string :token, null: false
-      t.string :refresh_token, null: false
+      t.string :token_digest, null: false
+      t.string :refresh_token_digest, null: false
       t.integer :expires_in, null: false
       t.string :scopes, default: ''
       t.datetime :revoked_at
@@ -46,7 +46,7 @@ class CreateAdministrateModelContextProtocolAuthorizationTables < ActiveRecord::
 
     add_index :administrate_mcp_oauth_access_tokens, :admin_id, if_not_exists: true
     add_index :administrate_mcp_oauth_access_tokens, :application_id, if_not_exists: true
-    add_index :administrate_mcp_oauth_access_tokens, :token, unique: true, if_not_exists: true
-    add_index :administrate_mcp_oauth_access_tokens, :refresh_token, unique: true, if_not_exists: true
+    add_index :administrate_mcp_oauth_access_tokens, :token_digest, unique: true, if_not_exists: true
+    add_index :administrate_mcp_oauth_access_tokens, :refresh_token_digest, unique: true, if_not_exists: true
   end
 end
