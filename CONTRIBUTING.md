@@ -109,21 +109,5 @@ whatever else it does well.
 
 ## Releasing
 
-Releases are published to RubyGems by the `Release` workflow when a tag matching `v*` is pushed.
-The workflow authenticates with RubyGems trusted publishing (OpenID Connect), so no API key is
-stored in this repository.
-
-To cut a release:
-
-1. Bump `Administrate::MCP::VERSION` in `lib/administrate/mcp/version.rb`.
-2. In `CHANGELOG.md`, rename the `Unreleased` section to the new version with today's date and add a
-   fresh empty `Unreleased` section above it.
-3. Commit as `Release vX.Y.Z` and open a pull request; merge it once CI is green.
-4. Tag the merge commit `vX.Y.Z` and push the tag. The workflow checks that the tag matches the
-   version file, builds the gem and pushes it.
-
-One-time setup, done once by a RubyGems account owner: on rubygems.org, add a trusted publisher for
-this gem with repository owner `sorare`, repository `administrate-mcp`, workflow `release.yml` and
-environment `rubygems`. For the very first release, when the gem name does not exist yet on
-RubyGems, register it as a pending trusted publisher instead, or push the first version by hand
-with `gem push` from an account with multi-factor authentication enabled.
+Cutting a release is a maintainer task and is described in [RELEASING.md](RELEASING.md). A merged
+change ships in the next tagged version.
