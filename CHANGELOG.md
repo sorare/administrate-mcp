@@ -12,6 +12,12 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ### Added
 
+- The admin console for the engine's own tables: `AdministrateMcpApiKeyDashboard`,
+  `AdministrateMcpFeedbackDashboard`, and the `Administrate::MCP::ApiKeysAdmin` and
+  `Administrate::MCP::FeedbacksAdmin` controller concerns. A host includes a concern in a controller
+  of its own and keeps its base controller, authentication and policies; the engine supplies the
+  resource wiring, key generation, the one-time plaintext in the flash, and revocation. Write-enabled
+  keys are refused until the host overrides `mcp_write_access_allowed?`.
 - `config.admin_foreign_key`, defaulting to `:admin_id`, so a host whose admin table already has a
   differently named foreign key can keep that column name instead of renaming it. The association
   stays called `admin` everywhere in the engine's API; only the column it reads and writes changes.
