@@ -16,7 +16,7 @@ module Administrate
       WRITE_ACCESS_REFUSAL = 'Only administrators allowed to grant write access can create write-enabled API keys.'
 
       included do
-        administrate_mcp_resource Administrate::MCP::ApiKey, dashboard: AdministrateMcpApiKeyDashboard
+        administrate_mcp_resource Administrate::MCP::ApiKey
       end
 
       def create

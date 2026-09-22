@@ -12,7 +12,7 @@ module Administrate
       include ResourceController
 
       included do
-        administrate_mcp_resource Administrate::MCP::Feedback, dashboard: AdministrateMcpFeedbackDashboard
+        administrate_mcp_resource Administrate::MCP::Feedback
       end
 
       private

@@ -16,6 +16,14 @@ namespace :admin do
   resources :administrate_mcp_feedbacks, only: %i[index show edit update]
 end
 
+# app/dashboards/administrate_mcp_api_key_dashboard.rb
+class AdministrateMcpApiKeyDashboard < Administrate::MCP::ApiKeyDashboard
+end
+
+# app/dashboards/administrate_mcp_feedback_dashboard.rb
+class AdministrateMcpFeedbackDashboard < Administrate::MCP::FeedbackDashboard
+end
+
 # app/controllers/admin/administrate_mcp_api_keys_controller.rb
 module Admin
   class AdministrateMcpApiKeysController < Admin::ApplicationController
@@ -31,11 +39,16 @@ module Admin
 end
 ```
 
-That is the whole integration. `ApiKeysAdmin` generates the key, stores its digest, and puts the
-plaintext in the flash of the redirect that created it, because that response is the only place it
-can ever be read. `destroy` revokes rather than deletes, so the row still says what the token was.
-Both concerns point Administrate at the engine's model and dashboard, which the controller's own
-name cannot spell.
+`ApiKeysAdmin` generates the key, stores its digest, and puts the plaintext in the flash of the
+redirect that created it, because that response is the only place it can ever be read. `destroy`
+revokes rather than deletes, so the row still says what the token was. Both concerns point
+Administrate at the engine's model, which the controller's own name cannot spell.
+
+The two empty subclasses are the part the engine cannot write for you. Administrate finds a
+dashboard by camelizing the controller's name, and an application that registers MCP as an
+inflection acronym expects `AdministrateMCPApiKeyDashboard` where one that does not expects
+`AdministrateMcpApiKeyDashboard`. Name the file `administrate_mcp_api_key_dashboard.rb` and the
+class whatever your own inflections produce for it; the columns come from the engine's class.
 
 The key owner comes from `config.current_admin`, so no host code decides it twice. If your base
 controller offers Pundit's `authorize`, both actions call it.
@@ -68,14 +81,17 @@ end
 
 ### Different columns
 
-`AdministrateMcpApiKeyDashboard` and `AdministrateMcpFeedbackDashboard` are ordinary Administrate
-dashboards. Subclass one under a different name and point the controller at it:
+Redefine the constants you want to change in your subclass:
 
 ```ruby
-class ApiKeyConsoleDashboard < AdministrateMcpApiKeyDashboard
+class AdministrateMcpApiKeyDashboard < Administrate::MCP::ApiKeyDashboard
   COLLECTION_ATTRIBUTES = %i[name last_used_at].freeze
 end
+```
 
+For a console mounted at a path Administrate cannot derive the dashboard from, name it explicitly:
+
+```ruby
 module Admin
   class AdministrateMcpApiKeysController < Admin::ApplicationController
     include Administrate::MCP::ApiKeysAdmin
@@ -83,9 +99,6 @@ module Admin
   end
 end
 ```
-
-Give the subclass its own name rather than reopening `AdministrateMcpApiKeyDashboard`: two files
-defining one constant is an autoloading error, not an override.
 
 ## Listing the engine's tables over the protocol
 
