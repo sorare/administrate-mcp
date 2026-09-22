@@ -8,8 +8,9 @@ module Administrate
         Administrate::MCP::Tools::AdminResourceList
         Administrate::MCP::Tools::AdminResourceShow
         Administrate::MCP::Tools::AdminResourceListResources
-        Administrate::MCP::Tools::ReportImprovement
       ].freeze
+
+      REPORT_IMPROVEMENT_TOOL = 'Administrate::MCP::Tools::ReportImprovement'
 
       SIDEKIQ_RETRIES_TOOL = 'Administrate::MCP::Tools::SidekiqRetries'
 
@@ -46,6 +47,7 @@ module Administrate
 
         def built_in_tools
           names = BUILT_IN_TOOLS.dup
+          names << REPORT_IMPROVEMENT_TOOL if Administrate::MCP.config.feedback_tool
           names << SIDEKIQ_RETRIES_TOOL if defined?(::Sidekiq)
           names << SIDEKIQ_STATS_TOOL if defined?(::Sidekiq) && Administrate::MCP.config.sidekiq_stats_provider
           names.filter_map(&:safe_constantize)

@@ -17,6 +17,24 @@ RSpec.describe Administrate::MCP::Configuration do
     end
   end
 
+  describe '#admin_foreign_key' do
+    it 'defaults to :admin_id' do
+      expect(config.admin_foreign_key).to eq(:admin_id)
+    end
+  end
+
+  describe '#persist_feedback' do
+    it 'defaults to false' do
+      expect(config.persist_feedback).to be(false)
+    end
+  end
+
+  describe '#feedback_tool' do
+    it 'defaults to true' do
+      expect(config.feedback_tool).to be(true)
+    end
+  end
+
   describe '#issuer_for' do
     it 'returns a plain string unchanged' do
       config.issuer = 'https://admin-mcp.example.com'

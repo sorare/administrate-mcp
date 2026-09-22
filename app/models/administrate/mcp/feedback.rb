@@ -9,8 +9,7 @@ module Administrate
       belongs_to_admin
       belongs_to :api_key, class_name: 'Administrate::MCP::ApiKey', optional: true, inverse_of: :feedbacks
 
-      enum :category,
-           { description: 0, missing_filter: 1, missing_field: 2, missing_resource: 3, serialization: 4, other: 5 }
+      enum :category, FeedbackCategories::CATEGORIES
       enum :status, { pending: 0, accepted: 1, rejected: 2, shipped: 3 }, prefix: true
 
       validates :suggestion, presence: true

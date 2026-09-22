@@ -15,6 +15,7 @@ module ConfigureDummy
       c.sign_in = ->(controller) { controller.redirect_to('http://admin.example.com/admins/sign_in') }
       c.admin_url_options = { host: 'admin.example.com', protocol: 'https' }
       c.authorization = Administrate::MCP::Authorization::Permissive.new
+      c.persist_feedback = true
     end
   end
 end

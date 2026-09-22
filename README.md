@@ -23,6 +23,7 @@ permissions the admin UI enforces.
 - [Dashboard declarations](#dashboard-declarations)
 - [Authentication](#authentication)
 - [OAuth](#oauth)
+- [Improving the server from its own use](#improving-the-server-from-its-own-use)
 - [Rate limiting](#rate-limiting)
 - [Admin integration](#admin-integration)
 - [Development](#development)
@@ -53,8 +54,11 @@ about your application; everything host-specific goes through `Administrate::MCP
   as the admin UI, so a resource an admin cannot see in the browser is not exposed over MCP either.
 - Search, filters and field selection built from the dashboard's own declarations, plus foreign key
   filters that need no declaration at all.
-- A feedback tool, `report_mcp_improvement`, so users can report what the server got wrong, and a
-  housekeeping method to clean up old feedback records.
+- A feedback tool, `report_mcp_improvement`, so the client can tell you which of your descriptions,
+  filters and fields let it down, and you can fix them. See
+  [Improving the server from its own use](#improving-the-server-from-its-own-use). The signal is
+  always available through `config.on_feedback`; storing it, the dashboard and the clean-up service
+  are a batteries-included option a host turns on with `config.persist_feedback`.
 - Optional Sidekiq introspection tools, `sidekiq_stats` and `sidekiq_retries`, wired to a stats
   provider object you supply.
 - No reference to a constant it does not own: field serializers are keyed on class names, dashboards
@@ -151,13 +155,20 @@ bin/rails db:migrate
 
 The tables are `administrate_mcp_api_keys`, `administrate_mcp_feedbacks`,
 `administrate_mcp_oauth_applications`, `administrate_mcp_oauth_access_grants` and
-`administrate_mcp_oauth_access_tokens`. They use uuid primary keys and a uuid `admin_id` column
-that is indexed but carries no foreign key constraint, so the engine works with any admin table.
+`administrate_mcp_oauth_access_tokens`. They use uuid primary keys and a uuid column, `admin_id` by
+default, that is indexed but carries no foreign key constraint, so the engine works with any admin
+table. Set `config.admin_foreign_key` before running the migrations if the host's own admin table
+already uses a different column name and renaming it is not an option, for example a live
+credentials table.
+
+`administrate_mcp_feedbacks` is only needed when `config.persist_feedback` is `true`; leave it
+`false`, the default, and the migration ships but the table is never read from or written to.
 
 ## Quick start
 
 The smallest configuration that works. Save it as `config/initializers/administrate_mcp.rb`; it
-must run before the engine's models load, because the `admin` association reads `admin_class_name`:
+must run before the engine's models load, because the `admin` association reads `admin_class_name`
+and `admin_foreign_key`:
 
 ```ruby
 Administrate::MCP.configure do |c|
@@ -217,6 +228,35 @@ with the gem for hosts that run edge-managed OAuth in front of the application:
 
 The built-in OAuth 2.1 server, what turning it off with `c.oauth = false` changes, and when a host
 should: [docs/oauth.md](docs/oauth.md).
+
+## Improving the server from its own use
+
+Every tool here is built from your dashboards: the resource names, the field lists, the filters and
+the `MCP_DESCRIPTION` you wrote. The client calling those tools is the one that gets misled when any
+of it is wrong, and it is the only party that knows which call it was trying to make. The engine has
+no way to detect this on its own: a vague description is not an error, it is a successful call that
+returned the wrong thing or a query the caller gave up on.
+
+`report_mcp_improvement` is how the client tells you. Its categories are deliberately not free text.
+Each one names a change you make in a dashboard:
+
+| Category | What it points at |
+| --- | --- |
+| `description` | `MCP_DESCRIPTION` is missing, vague or actively misleading |
+| `missing_filter` | the query needed a filter the dashboard does not declare |
+| `missing_field` | a field the caller needed is not on the show page |
+| `missing_resource` | a dashboard is not exposed, or does not exist |
+| `serialization` | a field came back unreadable and needs a serializer registered |
+| `other` | anything the categories above do not cover |
+
+A report arrives with the category, the resource it concerns and the client's own account of what it
+wanted, which is most of a change request already. Wire `config.on_feedback` to somewhere your team
+will actually read, work through what arrives, and the next caller gets a server that describes
+itself better. Turning on `config.persist_feedback` keeps the reports in a table so you can triage a
+batch at a time rather than react to each one.
+
+This is the loop the tool exists for. It is worth running deliberately rather than waiting for
+complaints: point a client at the server, give it real tasks, and collect what it could not do.
 
 ## Rate limiting
 

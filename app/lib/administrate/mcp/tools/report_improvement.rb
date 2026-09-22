@@ -15,7 +15,7 @@ module Administrate
           properties: {
             category: {
               type: 'string',
-              enum: Feedback.categories.keys,
+              enum: FeedbackCategories::CATEGORIES.keys,
               description: 'The type of improvement being reported.'
             },
             resource_name: {
@@ -35,7 +35,10 @@ module Administrate
 
           return error_response(result.errors.join(', ')) unless result.success?
 
-          json_response({ status: 'created', feedback_id: result.feedback.id })
+          payload = { status: 'created' }
+          payload[:feedback_id] = result.report.record.id if result.report.record
+
+          json_response(payload)
         end
       end
     end

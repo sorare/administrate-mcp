@@ -44,6 +44,7 @@ module Administrate
                     :oauth,
                     :sign_in,
                     :admin_class_name,
+                    :admin_foreign_key,
                     :authorization,
                     :default_required_roles,
                     :tool_paths,
@@ -54,6 +55,8 @@ module Administrate
                     :on_error,
                     :allow_localhost_redirects,
                     :default_client_name,
+                    :persist_feedback,
+                    :feedback_tool,
                     :sidekiq_stats_provider,
                     :admin_route_namespace,
                     :admin_url_options,
@@ -80,6 +83,7 @@ module Administrate
         @oauth = true
         @sign_in = nil
         @admin_class_name = 'Administrator'
+        @admin_foreign_key = :admin_id
         @authorization = default_authorization
         @default_required_roles = []
         @tool_paths = []
@@ -89,11 +93,13 @@ module Administrate
       def assign_hooks
         @instrument = ->(tool_name:, admin:, &block) { block.call } # rubocop:disable Lint/UnusedBlockArgument
         @on_tool_call = ->(tool_name:, admin:, arguments:, scopes:) {}
-        @on_feedback = ->(feedback) {}
+        @on_feedback = ->(report) {}
         @on_error = ->(exception) {}
         @allow_localhost_redirects = true
         @api_key_token_prefix = 'amcp_'
         @default_client_name = 'MCP Client'
+        @persist_feedback = false
+        @feedback_tool = true
         @sidekiq_stats_provider = nil
       end
 
