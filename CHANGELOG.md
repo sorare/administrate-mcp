@@ -2,11 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-
-Nothing has been published to RubyGems yet.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
+follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the major version is 0, a
+minor release may change behaviour a host depends on; the entry says so when it does.
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-09-22
 
 ### Added
 
@@ -51,6 +53,9 @@ Nothing has been published to RubyGems yet.
 - OAuth access tokens, refresh tokens and authorization codes are now stored as SHA-256 digests
   (`token_digest`, `refresh_token_digest`) instead of plaintext, matching how API keys were already
   stored. The plaintext is handed to the caller once, when it is issued, and is not recoverable
-  afterwards. This changes the schema of the authorization tables migration. The gem has not been
-  published yet, so anyone who already installed its migrations must reinstall them rather than
-  migrate incrementally.
+  afterwards. This changes the schema of the authorization tables migration, so installations that
+  took the gem from git before 0.1.0 must reinstall its migrations rather than migrate
+  incrementally.
+
+[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/sorare/administrate-mcp/releases/tag/v0.1.0
