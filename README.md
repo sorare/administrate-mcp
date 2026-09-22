@@ -59,6 +59,9 @@ about your application; everything host-specific goes through `Administrate::MCP
   [Improving the server from its own use](#improving-the-server-from-its-own-use). The signal is
   always available through `config.on_feedback`; storing it, the dashboard and the clean-up service
   are a batteries-included option a host turns on with `config.persist_feedback`.
+- The admin console for its own tables, as two dashboards and two controller concerns you include
+  in controllers of your own: issuing an API key, revoking one, and reading the feedback, without
+  giving up your base controller, your authentication or your policies.
 - Optional Sidekiq introspection tools, `sidekiq_stats` and `sidekiq_retries`, wired to a stats
   provider object you supply.
 - No reference to a constant it does not own: field serializers are keyed on class names, dashboards
@@ -265,8 +268,9 @@ for you: [docs/oauth.md#rate-limiting](docs/oauth.md#rate-limiting).
 
 ## Admin integration
 
-Exposing the engine's own tables (API keys, feedback) in your host admin, customising the consent
-screen, and cleaning up old feedback: [docs/admin-integration.md](docs/admin-integration.md).
+Including the API key and feedback consoles the engine ships, what a host overrides in them,
+listing the engine's own tables over the protocol, customising the consent screen, and cleaning up
+old feedback: [docs/admin-integration.md](docs/admin-integration.md).
 
 ## Development
 
