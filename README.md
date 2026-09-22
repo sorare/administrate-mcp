@@ -53,8 +53,9 @@ about your application; everything host-specific goes through `Administrate::MCP
   as the admin UI, so a resource an admin cannot see in the browser is not exposed over MCP either.
 - Search, filters and field selection built from the dashboard's own declarations, plus foreign key
   filters that need no declaration at all.
-- A feedback tool, `report_mcp_improvement`, so users can report what the server got wrong, and a
-  housekeeping method to clean up old feedback records.
+- A feedback tool, `report_mcp_improvement`, so users can report what the server got wrong. The
+  signal is always available through `config.on_feedback`; storing it, the dashboard and the
+  clean-up service are a batteries-included option a host turns on with `config.persist_feedback`.
 - Optional Sidekiq introspection tools, `sidekiq_stats` and `sidekiq_retries`, wired to a stats
   provider object you supply.
 - No reference to a constant it does not own: field serializers are keyed on class names, dashboards
@@ -151,13 +152,20 @@ bin/rails db:migrate
 
 The tables are `administrate_mcp_api_keys`, `administrate_mcp_feedbacks`,
 `administrate_mcp_oauth_applications`, `administrate_mcp_oauth_access_grants` and
-`administrate_mcp_oauth_access_tokens`. They use uuid primary keys and a uuid `admin_id` column
-that is indexed but carries no foreign key constraint, so the engine works with any admin table.
+`administrate_mcp_oauth_access_tokens`. They use uuid primary keys and a uuid column, `admin_id` by
+default, that is indexed but carries no foreign key constraint, so the engine works with any admin
+table. Set `config.admin_foreign_key` before running the migrations if the host's own admin table
+already uses a different column name and renaming it is not an option, for example a live
+credentials table.
+
+`administrate_mcp_feedbacks` is only needed when `config.persist_feedback` is `true`; leave it
+`false`, the default, and the migration ships but the table is never read from or written to.
 
 ## Quick start
 
 The smallest configuration that works. Save it as `config/initializers/administrate_mcp.rb`; it
-must run before the engine's models load, because the `admin` association reads `admin_class_name`:
+must run before the engine's models load, because the `admin` association reads `admin_class_name`
+and `admin_foreign_key`:
 
 ```ruby
 Administrate::MCP.configure do |c|

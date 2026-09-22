@@ -8,6 +8,29 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-22
+
+### Added
+
+- `config.admin_foreign_key`, defaulting to `:admin_id`, so a host whose admin table already has a
+  differently named foreign key can keep that column name instead of renaming it. The association
+  stays called `admin` everywhere in the engine's API; only the column it reads and writes changes.
+- `config.persist_feedback`, defaulting to `false`, so a host can use `report_mcp_improvement` and
+  `on_feedback` as a plain signal without carrying the `administrate_mcp_feedbacks` table, its model
+  or its migration. Set it to `true` for the previous behaviour: the report is persisted before
+  `on_feedback` runs, and the dashboard and `CleanOldFeedbacks` housekeeping become meaningful.
+- `config.feedback_tool`, defaulting to `true`, to stop publishing `report_mcp_improvement`
+  altogether.
+
+### Changed
+
+- `on_feedback` is now called with a `FeedbackReport`, a plain value object, instead of a persisted
+  `Feedback` record. A host reading attributes off the argument (`category`, `suggestion`,
+  `resource_name`, `admin`, `api_key`) sees no difference; a host that relied on it being an
+  `ActiveRecord` instance, for example calling `.save`, `.update` or `.reload` on it, or expecting
+  `.persisted?` to be true, must update its `on_feedback` hook. When `config.persist_feedback` is
+  `true` the persisted record is still reachable, as `report.record`.
+
 ## [0.1.0] - 2026-09-22
 
 ### Added
@@ -57,5 +80,6 @@ minor release may change behaviour a host depends on; the entry says so when it 
   took the gem from git before 0.1.0 must reinstall its migrations rather than migrate
   incrementally.
 
-[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/sorare/administrate-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sorare/administrate-mcp/releases/tag/v0.1.0

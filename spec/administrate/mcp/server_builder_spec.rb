@@ -42,6 +42,20 @@ RSpec.describe Administrate::MCP::ServerBuilder do
       expect(names).to include('sidekiq_retries')
     end
 
+    it 'registers report_mcp_improvement by default' do
+      names = described_class.discover_tools({ admin:, scopes: [] }).map(&:name_value)
+
+      expect(names).to include('report_mcp_improvement')
+    end
+
+    it 'leaves report_mcp_improvement out once feedback_tool is disabled' do
+      Administrate::MCP.config.feedback_tool = false
+
+      names = described_class.discover_tools({ admin:, scopes: [] }).map(&:name_value)
+
+      expect(names).not_to include('report_mcp_improvement')
+    end
+
     it 'adds the generated action tools once the write scope is granted' do
       names = described_class.discover_tools({ admin:, scopes: ['write'] }).map(&:name_value)
 

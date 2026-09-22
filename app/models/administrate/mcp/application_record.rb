@@ -15,7 +15,10 @@ module Administrate
         end
 
         def belongs_to_admin
-          belongs_to :admin, class_name: Administrate::MCP.config.admin_class_name, optional: false
+          belongs_to :admin, class_name: Administrate::MCP.config.admin_class_name,
+                             foreign_key: Administrate::MCP.config.admin_foreign_key,
+                             inverse_of: false,
+                             optional: false
         end
       end
     end

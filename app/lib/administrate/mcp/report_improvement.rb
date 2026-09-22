@@ -2,9 +2,12 @@
 
 module Administrate
   module MCP
-    # Persists an MCP improvement suggestion and hands it to the host's `on_feedback` hook.
+    # Validates an MCP improvement suggestion and hands a plain report to the host's `on_feedback`
+    # hook. Persisting the report to the `Feedback` table is opt-in through `config.persist_feedback`;
+    # when that is off, nothing here touches `Feedback` or `ApiKey`, so a host that never turns it on
+    # need not carry the table at all.
     class ReportImprovement
-      Result = Struct.new(:success?, :feedback, :errors, keyword_init: true)
+      Result = Struct.new(:success?, :report, :errors, keyword_init: true)
 
       def self.call(...)
         new(...).call
@@ -19,11 +22,11 @@ module Administrate
 
       def call
         errors = validation_errors
-        return Result.new(success?: false, feedback: nil, errors:) if errors.any?
+        return Result.new(success?: false, report: nil, errors:) if errors.any?
 
-        feedback = create_feedback
-        notify(feedback)
-        Result.new(success?: true, feedback:, errors: [])
+        report = build_report
+        notify(report)
+        Result.new(success?: true, report:, errors: [])
       end
 
       private
@@ -32,11 +35,20 @@ module Administrate
 
       def validation_errors
         errors = []
-        unless Feedback.categories.key?(category.to_s)
-          errors << "category must be one of: #{Feedback.categories.keys.join(', ')}"
+        unless FeedbackCategories::CATEGORIES.key?(category.to_s)
+          errors << "category must be one of: #{FeedbackCategories::CATEGORIES.keys.join(', ')}"
         end
         errors << "suggestion can't be blank" if suggestion.blank?
         errors
+      end
+
+      def build_report
+        record = create_feedback if persist_feedback?
+        FeedbackReport.new(admin:, category:, suggestion:, resource_name:, record:, api_key: record&.api_key)
+      end
+
+      def persist_feedback?
+        Administrate::MCP.config.persist_feedback
       end
 
       def create_feedback
@@ -47,9 +59,8 @@ module Administrate
         ApiKey.active.where(admin:).order(last_used_at: :desc).first
       end
 
-      # The feedback is already persisted; a broken notifier must not take the report down with it.
-      def notify(feedback)
-        Administrate::MCP.config.on_feedback.call(feedback)
+      def notify(report)
+        Administrate::MCP.config.on_feedback.call(report)
       rescue StandardError => e
         Administrate::MCP.config.on_error.call(e)
       end

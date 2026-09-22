@@ -12,6 +12,7 @@ needs three things to manage a namespaced model:
 # config/routes.rb, inside your admin namespace
 namespace :admin do
   resources :administrate_mcp_api_keys
+  # Only needed when config.persist_feedback is true; the table itself only exists then too.
   resources :administrate_mcp_feedbacks, only: %i[index show destroy]
 end
 
@@ -47,6 +48,11 @@ Override `app/views/administrate/mcp/o_auth/authorize.html.erb` in your applicat
 has `@application`, `@redirect_uri`, `@redirect_host` and `@scopes`.
 
 ## Feedback housekeeping
+
+The `administrate_mcp_feedbacks` table, its dashboard and this housekeeping service are only needed
+when `config.persist_feedback` is `true`. With it off, `report_mcp_improvement` still works and
+`on_feedback` still fires, just without a row behind it, and the table can be left out entirely; see
+[docs/configuration.md](configuration.md) for the setting.
 
 `Administrate::MCP::CleanOldFeedbacks.call(till: 2.months.ago)` deletes one batch of 10,000 and
 reports `more?`; schedule it however your app schedules work.

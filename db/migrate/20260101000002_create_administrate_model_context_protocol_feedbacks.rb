@@ -2,8 +2,10 @@
 
 class CreateAdministrateModelContextProtocolFeedbacks < ActiveRecord::Migration[8.1]
   def change
+    admin_foreign_key = Administrate::MCP.config.admin_foreign_key
+
     create_table :administrate_mcp_feedbacks, id: :uuid, if_not_exists: true do |t|
-      t.uuid :admin_id
+      t.uuid admin_foreign_key
       t.uuid :api_key_id
       t.integer :category, null: false
       t.string :resource_name
@@ -13,7 +15,7 @@ class CreateAdministrateModelContextProtocolFeedbacks < ActiveRecord::Migration[
       t.timestamps
     end
 
-    add_index :administrate_mcp_feedbacks, :admin_id, if_not_exists: true
+    add_index :administrate_mcp_feedbacks, admin_foreign_key, if_not_exists: true
     add_index :administrate_mcp_feedbacks, :api_key_id, if_not_exists: true
   end
 end

@@ -3,7 +3,8 @@
 [Back to README](../README.md)
 
 Configure the engine in an initializer, `config/initializers/administrate_mcp.rb`. It must run
-before the engine's models load, because the `admin` association reads `admin_class_name`.
+before the engine's models load, because the `admin` association reads `admin_class_name` and
+`admin_foreign_key`.
 
 ```ruby
 Administrate::MCP.configure do |c|
@@ -11,6 +12,7 @@ Administrate::MCP.configure do |c|
   c.server_version = '1.0.0'
 
   c.admin_class_name = 'Administrator'
+  c.admin_foreign_key = :administrator_id
   c.current_admin = ->(controller) { controller.send(:warden)&.authenticate(scope: :administrator) }
   c.admin_active = ->(admin) { admin.admin? && admin.anonymized_at.nil? }
   c.sign_in = lambda do |controller|
@@ -36,9 +38,27 @@ Administrate::MCP.configure do |c|
     Admin::AuditOperation.call!(administrator_id: admin.id, request_method: 'POST',
                                 request_url: "mcp://tools/#{tool_name}", params: arguments)
   end
-  c.on_feedback = ->(feedback) { SlackNotifier.notify(notification_type: :mcp_feedback, blocks: blocks_for(feedback)) }
+  c.persist_feedback = true
+  c.on_feedback = ->(report) { SlackNotifier.notify(notification_type: :mcp_feedback, blocks: blocks_for(report)) }
 end
 ```
+
+Set `admin_foreign_key` when the host's own admin table already has a foreign key column under a
+different name, for example a live credentials table called `administrator_id`, and renaming that
+column is not something you want to do. The association is still called `admin` everywhere the
+engine's API uses it; only the column it reads and writes changes.
+
+`report_mcp_improvement` gives users of the MCP server a way to flag what the server got wrong; the
+gem's job stops at reporting that signal to `on_feedback`. Storing what it reports, showing it in a
+dashboard and cleaning up old rows is an opinion about how a host wants to handle the signal, not
+something every host needs, so it is batteries-included rather than mandatory: set
+`persist_feedback` to `true` to have the gem create an `Administrate::MCP::Feedback` row before
+calling `on_feedback`, expose it in your admin as described in
+[docs/admin-integration.md](admin-integration.md), and clean old rows up with
+`Administrate::MCP::CleanOldFeedbacks`. Leave it `false`, the default, and `on_feedback` still fires
+with the same report, just without a persisted record behind it, and the `administrate_mcp_feedbacks`
+table is never touched. Set `feedback_tool` to `false` to stop publishing `report_mcp_improvement`
+at all.
 
 ## The full configuration object
 
@@ -77,6 +97,7 @@ class Configuration
                 :oauth,
                 :sign_in,
                 :admin_class_name,
+                :admin_foreign_key,
                 :authorization,
                 :default_required_roles,
                 :tool_paths,
@@ -87,6 +108,8 @@ class Configuration
                 :on_error,
                 :allow_localhost_redirects,
                 :default_client_name,
+                :persist_feedback,
+                :feedback_tool,
                 :sidekiq_stats_provider,
                 :admin_route_namespace,
                 :admin_url_options,
@@ -107,6 +130,7 @@ class Configuration
     @oauth = true
     @sign_in = nil
     @admin_class_name = 'Administrator'
+    @admin_foreign_key = :admin_id
     @authorization = default_authorization
     @default_required_roles = []
     @tool_paths = []
@@ -116,11 +140,13 @@ class Configuration
   def assign_hooks
     @instrument = ->(tool_name:, admin:, &block) { block.call }
     @on_tool_call = ->(tool_name:, admin:, arguments:, scopes:) {}
-    @on_feedback = ->(feedback) {}
+    @on_feedback = ->(report) {}
     @on_error = ->(exception) {}
     @allow_localhost_redirects = true
     @api_key_token_prefix = 'amcp_'
     @default_client_name = 'MCP Client'
+    @persist_feedback = false
+    @feedback_tool = true
     @sidekiq_stats_provider = nil
   end
 
@@ -155,18 +181,21 @@ end
 | `identity_fallback`         | returns `nil`                      | Proc taking the request, returning an `Authentication::Identity` or nil, consulted when no credential the engine issued matched                                                  |
 | `oauth`                     | `true`                             | Whether the engine serves its own OAuth 2.1 server. False draws no OAuth routes and never looks an access token up                                                               |
 | `sign_in`                   | `nil` (renders 401)                | Proc taking the OAuth controller, sending an anonymous visitor to sign in                                                                                                        |
-| `admin_class_name`          | `'Administrator'`                  | Class the `admin_id` column points at                                                                                                                                            |
+| `admin_class_name`          | `'Administrator'`                  | Class the admin foreign key column points at                                                                                                                                     |
+| `admin_foreign_key`         | `:admin_id`                        | Column on the engine's own tables that stores the owning admin's id. The association is still called `admin`; only the column name changes                                       |
 | `authorization`             | Pundit if defined, else Permissive | Adapter: `authorize!`, `authorized?`, `authorize_roles!`                                                                                                                         |
 | `default_required_roles`    | `[]`                               | Roles a tool requires unless it declares its own                                                                                                                                 |
 | `tool_paths`                | `[]`                               | Directories scanned for extra `BaseTool` subclasses                                                                                                                              |
 | `dashboard_paths`           | `app/dashboards`                   | Where dashboards are found                                                                                                                                                       |
 | `instrument`                | yields                             | Around hook `(tool_name:, admin:, &block)`                                                                                                                                       |
 | `on_tool_call`              | no-op                              | Audit hook `(tool_name:, admin:, arguments:, scopes:)`, after the permission checks                                                                                              |
-| `on_feedback`               | no-op                              | Called with each new `Feedback` record                                                                                                                                           |
+| `on_feedback`               | no-op                              | Called with each `FeedbackReport`, whether or not it was persisted                                                                                                               |
 | `on_error`                  | no-op                              | Called with an exception the engine swallowed, so you can report it                                                                                                              |
 | `allow_localhost_redirects` | `true`                             | Whether loopback OAuth redirect URIs are accepted. Inert when `oauth` is false                                                                                                   |
 | `api_key_token_prefix`      | `'amcp_'`                          | Prefix that marks a bearer token as an API key. Cannot be blank                                                                                                                  |
 | `default_client_name`       | `'MCP Client'`                     | Name given to a dynamically registered client that sends no `client_name`. Inert when `oauth` is false                                                                           |
+| `persist_feedback`          | `false`                            | Whether `report_mcp_improvement` creates an `Administrate::MCP::Feedback` row before calling `on_feedback`. False needs no `administrate_mcp_feedbacks` table at all             |
+| `feedback_tool`             | `true`                             | Whether `report_mcp_improvement` is published                                                                                                                                    |
 | `sidekiq_stats_provider`    | `nil`                              | Object answering `counts`, `total_counts`, `queues`, `stats_cleared_at`; a class name String or a Proc is resolved lazily so autoloaded providers can be named in an initializer |
 | `admin_route_namespace`     | `:admin`                           | Namespace record URLs are built from                                                                                                                                             |
 | `admin_url_options`         | `{}`                               | Options passed to `polymorphic_url`; when no `:host` is given, host, protocol and port are taken from `admin_origin`                                                             |
