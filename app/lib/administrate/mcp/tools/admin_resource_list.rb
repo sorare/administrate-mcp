@@ -24,10 +24,7 @@ module Administrate
               description:
                 'Resource type name (e.g., "card", "user", "player"). ' \
                 'Use admin_resource_list_resources with no arguments to see available ones. ' \
-                'Many resources are namespaced (e.g. "shop/order") and bare names are not aliased. ' \
-                'An unrecognised name currently surfaces as an authorization error, not a "not found" ' \
-                'error, so treat an auth failure here as a likely wrong resource name and re-check the ' \
-                'catalog rather than assuming the server is unavailable.'
+                'Many resources are namespaced (e.g. "shop/order") and bare names are not aliased.'
             },
             query: {
               type: 'string',
@@ -86,7 +83,6 @@ module Administrate
           required: %w[resource]
         )
 
-        # rubocop:disable-next Lint/UnusedMethodArgument
         def self.execute(
           admin:,
           resource:,
@@ -99,7 +95,7 @@ module Administrate
           page: 1,
           per_page: 10
         )
-          entry = find_dashboard_entry!(resource)
+          entry = find_dashboard_entry!(admin, resource)
           dashboard = entry.dashboard_class.new
           per_page = per_page.to_i.clamp(1, MAX_PER_PAGE)
           page = [page.to_i, 1].max

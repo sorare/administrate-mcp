@@ -8,7 +8,7 @@ module Administrate
       class AdminResourceListResources < AdminDashboardTool
         tool_name 'admin_resource_list_resources'
         description 'Discover available admin resources. ' \
-                    'Without a resource param: returns all resource names (lightweight catalog). ' \
+                    'Without a resource param: returns the resource names you can read (lightweight catalog). ' \
                     'With a resource param: returns fields and filters for that resource.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
 
@@ -19,10 +19,7 @@ module Administrate
               description:
                 'Resource name to inspect (optional). When provided, returns fields and filters for that ' \
                 'resource. Must be an exact name from the no-argument catalog — many resources are ' \
-                'namespaced (e.g. "shop/order") and bare names are not aliased. An unrecognised name ' \
-                'currently surfaces as an authorization error, not a "not found" error, so treat an auth ' \
-                'failure here as a likely wrong resource name and re-check the catalog rather than ' \
-                'assuming the server is unavailable.'
+                'namespaced (e.g. "shop/order") and bare names are not aliased.'
             }
           }
         )
@@ -49,7 +46,7 @@ module Administrate
         end
 
         def self.detail_response(admin, resource_name)
-          entry = find_dashboard_entry!(resource_name)
+          entry = find_dashboard_entry!(admin, resource_name)
           authorize_resource!(admin, entry.model_class, :index?)
 
           json_response(build_detail(resource_name, entry))

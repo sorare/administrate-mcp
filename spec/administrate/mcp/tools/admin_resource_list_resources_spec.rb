@@ -50,11 +50,7 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceListResources do
         end
       end
 
-      it 'rejects an unknown resource' do
-        result = described_class.call(server_context:, resource: 'nonexistent')
-
-        expect(result.content.first[:text]).to include('Unknown resource: nonexistent')
-      end
+      it_behaves_like 'a tool reporting resource errors', verb: 'list'
     end
   end
 end

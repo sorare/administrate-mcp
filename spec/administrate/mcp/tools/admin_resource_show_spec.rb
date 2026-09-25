@@ -42,6 +42,8 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceShow do
       expect(data['gadgets']['items'].size).to eq(1)
     end
 
+    it_behaves_like 'a tool reporting resource errors', verb: 'show', arguments: { id: 'any' }
+
     describe 'batch lookup' do
       let!(:other) { create(:widget) }
 

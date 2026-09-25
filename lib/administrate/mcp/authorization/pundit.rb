@@ -11,7 +11,7 @@ module Administrate
           policy = policy_for(admin, record_or_class)
           return if policy.public_send(action)
 
-          raise UnauthorizedError, "Not authorized to #{action} #{model_name(record_or_class)}"
+          raise UnauthorizedError, Base.denial_message(action, model_name(record_or_class))
         end
 
         def authorized?(admin, record_or_class, action)

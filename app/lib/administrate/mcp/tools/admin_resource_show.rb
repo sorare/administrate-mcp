@@ -24,10 +24,7 @@ module Administrate
               description:
                 'Resource type name (e.g., "card", "user", "player"). ' \
                 'Use admin_resource_list_resources with no arguments to see available ones. ' \
-                'Many resources are namespaced (e.g. "shop/order") and bare names are not aliased. ' \
-                'An unrecognised name currently surfaces as an authorization error, not a "not found" ' \
-                'error, so treat an auth failure here as a likely wrong resource name and re-check the ' \
-                'catalog rather than assuming the server is unavailable.'
+                'Many resources are namespaced (e.g. "shop/order") and bare names are not aliased.'
             },
             id: {
               oneOf: [
@@ -75,8 +72,8 @@ module Administrate
           required: %w[resource id]
         )
 
-        def self.execute(admin:, resource:, id:, fields: nil, expand: nil) # rubocop:disable Lint/UnusedMethodArgument
-          entry = find_dashboard_entry!(resource)
+        def self.execute(admin:, resource:, id:, fields: nil, expand: nil)
+          entry = find_dashboard_entry!(admin, resource)
           dashboard = entry.dashboard_class.new
           attrs, expand_set =
             resolve_attributes_and_expansions(dashboard, fields, expand, :show_page_attributes, MAX_EXPAND)
