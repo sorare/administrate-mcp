@@ -8,6 +8,22 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Changed
+
+- **Behaviour change for clients:** two failures of `admin_resource_list_resources`,
+  `admin_resource_list` and `admin_resource_show` now return HTTP 200 with a tool error
+  (`result.isError: true`) instead of HTTP 403 with `X-Auth-Error: forbidden` and JSON-RPC code
+  -32003, which clients such as Claude showed as an authentication failure without the message:
+  - An unknown resource name. The message says the name is not registered and lists up to five
+    close registered names.
+  - A registered resource the caller's role may not read. The message is "Resource `<name>` exists
+    but your role is not authorized to list it" (or "show it"). This tells an authenticated admin
+    that the resource exists, which the 403 did not.
+
+  A tool-level refusal, a missing OAuth scope or a required role, is still a 403. The per-resource
+  denial is raised as `Administrate::MCP::ResourceForbiddenError`, a subclass of
+  `UnauthorizedError`, so host code that rescues `UnauthorizedError` still catches it.
+
 ## [0.2.0] - 2026-09-22
 
 ### Added

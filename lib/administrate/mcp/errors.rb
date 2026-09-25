@@ -9,6 +9,12 @@ module Administrate
     class UnauthorizedError < Error
     end
 
+    # Raised when the caller's role may not read one resource. It is still an authorization failure,
+    # but it is returned as a tool error rather than a 403: the credentials work for the tool, only
+    # this resource is out of reach, and the caller needs the message to tell the two apart.
+    class ResourceForbiddenError < UnauthorizedError
+    end
+
     # Raised when the host asked for something the configuration cannot deliver.
     class ConfigurationError < Error
     end

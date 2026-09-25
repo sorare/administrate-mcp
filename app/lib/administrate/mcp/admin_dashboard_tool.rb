@@ -1,10 +1,14 @@
 # frozen_string_literal: true
 
+require 'did_you_mean'
+
 module Administrate
   module MCP
     # Base class for MCP tools that operate on Administrate dashboard resources.
     class AdminDashboardTool < BaseTool
       LISTED_VALID_VALUES = 40
+      MAX_SUGGESTIONS = 5
+      ACTION_VERBS = { index?: 'list', show?: 'show' }.freeze
 
       class << self
         def policy_action
@@ -22,15 +26,44 @@ module Administrate
           Administrate::MCP.config.authorization.authorized?(admin, model_class, action)
         end
 
+        # The adapter is the host's and raises a plain UnauthorizedError. Re-raised here so a denial on
+        # one resource reaches the caller as a tool error instead of a 403 on the whole response.
         def authorize_resource!(admin, model_class, action)
           Administrate::MCP.config.authorization.authorize!(admin, model_class, action)
+        rescue UnauthorizedError
+          verb = ACTION_VERBS.fetch(action.to_sym) { action.to_s.delete_suffix('?') }
+          raise ResourceForbiddenError,
+                "Resource `#{model_class.name.underscore}` exists but your role is not authorized to #{verb} it."
         end
 
         def find_dashboard_entry!(resource_name)
           entry = DashboardRegistry.find(resource_name)
           return entry if entry
 
-          raise UnauthorizedError, "Unknown resource: #{resource_name}"
+          raise InvalidArgumentError, unknown_resource_message(resource_name)
+        end
+
+        def unknown_resource_message(resource_name)
+          message = "Unknown resource: #{resource_name}. This name is not registered."
+          suggestions = resource_suggestions(resource_name)
+          return "#{message} Call admin_resource_list_resources for the catalog." if suggestions.empty?
+
+          "#{message} Closest registered names: #{suggestions.join(', ')}"
+        end
+
+        # Matches on the last path segment too, so a bare "order" finds "shop/order".
+        def resource_suggestions(resource_name)
+          key = resource_name.to_s.underscore.singularize
+          names = DashboardRegistry.resource_names
+          by_segment = names.group_by { |name| name.split('/').last }
+          segment = key.split('/').last.to_s
+          close_segments = DidYouMean::SpellChecker.new(dictionary: by_segment.keys).correct(segment)
+
+          (
+            by_segment.fetch(segment, []) +
+              DidYouMean::SpellChecker.new(dictionary: names).correct(key) +
+              close_segments.flat_map { |name| by_segment[name] }
+          ).uniq.first(MAX_SUGGESTIONS)
         end
 
         def reject_unknown!(kind, given, allowed)

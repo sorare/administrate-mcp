@@ -39,13 +39,7 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceList do
       expect(result.content.first[:text]).to include('Unknown fields: nope')
     end
 
-    it 'rejects an unknown resource as an authorization error' do
-      ctx = { admin: }
-      result = described_class.call(server_context: ctx, resource: 'nonexistent')
-
-      expect(result.content.first[:text]).to include('Unknown resource: nonexistent')
-      expect(ctx[:authorization_errors]).not_to be_empty
-    end
+    it_behaves_like 'a tool reporting resource errors', verb: 'list'
 
     describe 'search' do
       it 'matches an exact slug' do

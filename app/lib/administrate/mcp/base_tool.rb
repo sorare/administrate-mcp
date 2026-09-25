@@ -5,6 +5,7 @@ module Administrate
     # Base class for all MCP tools — provides role gating, auditing, and response helpers.
     class BaseTool < ::MCP::Tool
       UnauthorizedError = Administrate::MCP::UnauthorizedError
+      ResourceForbiddenError = Administrate::MCP::ResourceForbiddenError
       InvalidArgumentError = Administrate::MCP::InvalidArgumentError
 
       class << self
@@ -26,10 +27,10 @@ module Administrate
 
         def call(server_context:, **args)
           instrument(server_context) { call_with_context(server_context, **args) }
+        rescue ResourceForbiddenError, InvalidArgumentError => e
+          error_response(e.message)
         rescue UnauthorizedError => e
           (server_context[:authorization_errors] ||= []).push(e.message)
-          error_response(e.message)
-        rescue InvalidArgumentError => e
           error_response(e.message)
         rescue StandardError => e
           error_response("Internal error: #{e.message}")

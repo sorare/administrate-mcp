@@ -246,29 +246,67 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       end
     end
 
-    context 'with a tool call the admin is not authorized for' do
-      it 'returns 403 with X-Auth-Error: forbidden and error code -32003' do
-        body = {
-          jsonrpc: '2.0',
-          method: 'tools/call',
-          id: 5,
-          params: {
-            name: 'admin_resource_list',
-            arguments: {
-              resource: 'nonexistent_resource'
-            }
-          }
-        }.to_json
+    describe 'resource errors on the admin_resource tools' do
+      def call_tool(name, arguments, id: 5)
+        body = { jsonrpc: '2.0', method: 'tools/call', id:, params: { name:, arguments: } }.to_json
         post '/', params: body, headers: headers
-
-        expect(response).to have_http_status(:forbidden)
-        expect(response.headers['X-Auth-Error']).to eq('forbidden')
-        expect(response.parsed_body.dig('error', 'code')).to eq(-32_003)
-        expect(response.parsed_body.dig('error', 'message')).to include('Unknown resource')
-        expect(response.parsed_body['id']).to eq(5)
       end
 
-      it 'still returns 403 when the call carries a params _meta object' do
+      {
+        'admin_resource_list' => { verb: 'list', arguments: {} },
+        'admin_resource_show' => { verb: 'show', arguments: { id: 'any' } },
+        'admin_resource_list_resources' => { verb: 'list', arguments: {} }
+      }.each do |tool, spec|
+        context "with #{tool}" do
+          it 'returns an unknown resource name as a tool error, not a 403' do
+            call_tool(tool, spec[:arguments].merge(resource: 'widgit'))
+
+            expect(response).to have_http_status(:ok)
+            expect(response.headers['X-Auth-Error']).to be_nil
+            expect(response.parsed_body.dig('result', 'isError')).to be(true)
+            expect(response.parsed_body.dig('result', 'content', 0, 'text')).to eq(
+              'Unknown resource: widgit. This name is not registered. Closest registered names: widget'
+            )
+          end
+
+          it 'returns a resource the role cannot read as a tool error, not a 403' do
+            Administrate::MCP.config.authorization = Administrate::MCP::Authorization::Pundit.new
+            stub_const(
+              'WidgetPolicy',
+              Class.new do
+                def initialize(admin, _record) = @admin = admin
+                def index? = false
+                def show? = false
+              end
+            )
+
+            call_tool(tool, spec[:arguments].merge(resource: 'widget'))
+
+            expect(response).to have_http_status(:ok)
+            expect(response.headers['X-Auth-Error']).to be_nil
+            expect(response.parsed_body.dig('result', 'isError')).to be(true)
+            expect(response.parsed_body.dig('result', 'content', 0, 'text')).to eq(
+              "Resource `widget` exists but your role is not authorized to #{spec[:verb]} it."
+            )
+          end
+
+          it 'still returns 403 with X-Auth-Error: forbidden and code -32003 when a tool-level gate refuses' do
+            tool_class = Administrate::MCP::ServerBuilder.built_in_tools.find { |klass| klass.name_value == tool }
+            allow(tool_class).to receive(:required_scopes).and_return([:write])
+
+            call_tool(tool, spec[:arguments].merge(resource: 'widget'))
+
+            expect(response).to have_http_status(:forbidden)
+            expect(response.headers['X-Auth-Error']).to eq('forbidden')
+            expect(response.parsed_body.dig('error', 'code')).to eq(-32_003)
+            expect(response.parsed_body.dig('error', 'message')).to eq('Missing required scope(s): write')
+            expect(response.parsed_body['id']).to eq(5)
+          end
+        end
+      end
+
+      it 'still returns 403 when the refused call carries a params _meta object' do
+        allow(Administrate::MCP::Tools::AdminResourceList).to receive(:required_scopes).and_return([:write])
         body = {
           jsonrpc: '2.0',
           method: 'tools/call',
@@ -276,7 +314,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
           params: {
             name: 'admin_resource_list',
             arguments: {
-              resource: 'nonexistent_resource'
+              resource: 'widget'
             },
             _meta: {
               progressToken: 'token'
@@ -422,7 +460,9 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       let(:rpc_method) { 'tools/call' }
       let(:rpc_id) { 5 }
       let(:tool_name) { 'admin_resource_list' }
-      let(:rpc_params) { { name: tool_name, arguments: { resource: 'nonexistent_resource' } } }
+      let(:rpc_params) { { name: tool_name, arguments: { resource: 'widget' } } }
+
+      before { allow(Administrate::MCP::Tools::AdminResourceList).to receive(:required_scopes).and_return([:write]) }
 
       it 'returns 403 with X-Auth-Error: forbidden and error code -32003' do
         post '/', params: body, headers: modern_headers
@@ -430,7 +470,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
         expect(response).to have_http_status(:forbidden)
         expect(response.headers['X-Auth-Error']).to eq('forbidden')
         expect(response.parsed_body.dig('error', 'code')).to eq(-32_003)
-        expect(response.parsed_body.dig('error', 'message')).to include('Unknown resource')
+        expect(response.parsed_body.dig('error', 'message')).to eq('Missing required scope(s): write')
         expect(response.parsed_body['id']).to eq(5)
       end
     end
