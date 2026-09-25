@@ -72,8 +72,8 @@ module Administrate
           required: %w[resource id]
         )
 
-        def self.execute(admin:, resource:, id:, fields: nil, expand: nil) # rubocop:disable Lint/UnusedMethodArgument
-          entry = find_dashboard_entry!(resource)
+        def self.execute(admin:, resource:, id:, fields: nil, expand: nil)
+          entry = find_dashboard_entry!(admin, resource)
           dashboard = entry.dashboard_class.new
           attrs, expand_set =
             resolve_attributes_and_expansions(dashboard, fields, expand, :show_page_attributes, MAX_EXPAND)

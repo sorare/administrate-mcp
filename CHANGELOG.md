@@ -13,16 +13,19 @@ minor release may change behaviour a host depends on; the entry says so when it 
 - **Behaviour change for clients:** two failures of `admin_resource_list_resources`,
   `admin_resource_list` and `admin_resource_show` now return HTTP 200 with a tool error
   (`result.isError: true`) instead of HTTP 403 with `X-Auth-Error: forbidden` and JSON-RPC code
-  -32003, which clients such as Claude showed as an authentication failure without the message:
+  -32003. Clients such as Claude showed that 403 as an authentication failure and dropped the message:
   - An unknown resource name. The message says the name is not registered and lists up to five
-    close registered names.
-  - A registered resource the caller's role may not read. The message is "Resource `<name>` exists
-    but your role is not authorized to list it" (or "show it"). This tells an authenticated admin
-    that the resource exists, which the 403 did not.
+    close registered names, taken only from the resources the caller can read.
+  - A registered resource the caller may not read. The message is "Resource `<name>` exists but you
+    are not authorized to list it" (or "show it"), followed by the authorization adapter's own
+    message when the host wrote one. The old 403 body already told the two cases apart
+    (`Unknown resource: …` against `Not authorized to show? <Model>`); the difference is that
+    clients now display it.
 
-  A tool-level refusal, a missing OAuth scope or a required role, is still a 403. The per-resource
-  denial is raised as `Administrate::MCP::ResourceForbiddenError`, a subclass of
-  `UnauthorizedError`, so host code that rescues `UnauthorizedError` still catches it.
+  A tool-level refusal, a missing OAuth scope or a required role, is still a 403 for now
+  ([#11](https://github.com/sorare/administrate-mcp/issues/11)). The per-resource denial is raised
+  as `Administrate::MCP::ResourceForbiddenError`, a subclass of `UnauthorizedError`, so host code
+  that rescues `UnauthorizedError` still catches it.
 
 ## [0.2.0] - 2026-09-22
 

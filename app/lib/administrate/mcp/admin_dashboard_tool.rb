@@ -18,7 +18,7 @@ module Administrate
         def check_roles!(admin, resource: nil, **)
           return unless resource && policy_action
 
-          entry = find_dashboard_entry!(resource)
+          entry = find_dashboard_entry!(admin, resource)
           authorize_resource!(admin, entry.model_class, policy_action)
         end
 
@@ -27,32 +27,40 @@ module Administrate
         end
 
         # The adapter is the host's and raises a plain UnauthorizedError. Re-raised here so a denial on
-        # one resource reaches the caller as a tool error instead of a 403 on the whole response.
+        # one resource reaches the caller as a tool error instead of a 403 on the whole response. A
+        # message the host wrote is kept, since it may say why; the adapters' generic one adds nothing.
         def authorize_resource!(admin, model_class, action)
           Administrate::MCP.config.authorization.authorize!(admin, model_class, action)
-        rescue UnauthorizedError
+        rescue UnauthorizedError => e
           verb = ACTION_VERBS.fetch(action.to_sym) { action.to_s.delete_suffix('?') }
-          raise ResourceForbiddenError,
-                "Resource `#{model_class.name.underscore}` exists but your role is not authorized to #{verb} it."
+          message = "Resource `#{model_class.name.underscore}` exists but you are not authorized to #{verb} it."
+          reason = e.message unless e.message == Authorization::Base.denial_message(action, model_class.name)
+          raise ResourceForbiddenError, [message, reason].compact.join(' ')
         end
 
-        def find_dashboard_entry!(resource_name)
+        def find_dashboard_entry!(admin, resource_name)
           entry = DashboardRegistry.find(resource_name)
           return entry if entry
 
-          raise InvalidArgumentError, unknown_resource_message(resource_name)
+          raise InvalidArgumentError, unknown_resource_message(admin, resource_name)
         end
 
-        def unknown_resource_message(resource_name)
+        def unknown_resource_message(admin, resource_name)
           message = "Unknown resource: #{resource_name}. This name is not registered."
-          suggestions = resource_suggestions(resource_name)
+          suggestions = resource_suggestions(admin, resource_name)
           return "#{message} Call admin_resource_list_resources for the catalog." if suggestions.empty?
 
           "#{message} Closest registered names: #{suggestions.join(', ')}"
         end
 
+        # Only names the caller can read are suggested, as in the catalog, so a typo does not reveal
+        # hidden resources.
+        def resource_suggestions(admin, resource_name)
+          suggestion_candidates(resource_name).lazy.select { |name| readable?(admin, name) }.first(MAX_SUGGESTIONS)
+        end
+
         # Matches on the last path segment too, so a bare "order" finds "shop/order".
-        def resource_suggestions(resource_name)
+        def suggestion_candidates(resource_name)
           key = resource_name.to_s.underscore.singularize
           names = DashboardRegistry.resource_names
           by_segment = names.group_by { |name| name.split('/').last }
@@ -63,7 +71,12 @@ module Administrate
             by_segment.fetch(segment, []) +
               DidYouMean::SpellChecker.new(dictionary: names).correct(key) +
               close_segments.flat_map { |name| by_segment[name] }
-          ).uniq.first(MAX_SUGGESTIONS)
+          ).uniq
+        end
+
+        def readable?(admin, resource_name)
+          entry = DashboardRegistry.find(resource_name)
+          entry && authorized?(admin, entry.model_class, :index?)
         end
 
         def reject_unknown!(kind, given, allowed)

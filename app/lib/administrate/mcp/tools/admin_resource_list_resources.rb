@@ -8,7 +8,7 @@ module Administrate
       class AdminResourceListResources < AdminDashboardTool
         tool_name 'admin_resource_list_resources'
         description 'Discover available admin resources. ' \
-                    'Without a resource param: returns the resource names your role can read (lightweight catalog). ' \
+                    'Without a resource param: returns the resource names you can read (lightweight catalog). ' \
                     'With a resource param: returns fields and filters for that resource.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
 
@@ -46,7 +46,7 @@ module Administrate
         end
 
         def self.detail_response(admin, resource_name)
-          entry = find_dashboard_entry!(resource_name)
+          entry = find_dashboard_entry!(admin, resource_name)
           authorize_resource!(admin, entry.model_class, :index?)
 
           json_response(build_detail(resource_name, entry))

@@ -269,7 +269,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
             )
           end
 
-          it 'returns a resource the role cannot read as a tool error, not a 403' do
+          it 'returns a resource the caller cannot read as a tool error, not a 403' do
             Administrate::MCP.config.authorization = Administrate::MCP::Authorization::Pundit.new
             stub_const(
               'WidgetPolicy',
@@ -286,11 +286,13 @@ RSpec.describe Administrate::MCP::JsonRpcController do
             expect(response.headers['X-Auth-Error']).to be_nil
             expect(response.parsed_body.dig('result', 'isError')).to be(true)
             expect(response.parsed_body.dig('result', 'content', 0, 'text')).to eq(
-              "Resource `widget` exists but your role is not authorized to #{spec[:verb]} it."
+              "Resource `widget` exists but you are not authorized to #{spec[:verb]} it."
             )
           end
 
-          it 'still returns 403 with X-Auth-Error: forbidden and code -32003 when a tool-level gate refuses' do
+          # Current behaviour, not a contract: https://github.com/sorare/administrate-mcp/issues/11 proposes
+          # a step-up WWW-Authenticate header for a missing scope and a tool error for a missing role.
+          it 'currently answers a tool-level refusal with 403, X-Auth-Error: forbidden and code -32003' do
             tool_class = Administrate::MCP::ServerBuilder.built_in_tools.find { |klass| klass.name_value == tool }
             allow(tool_class).to receive(:required_scopes).and_return([:write])
 
@@ -305,7 +307,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
         end
       end
 
-      it 'still returns 403 when the refused call carries a params _meta object' do
+      it 'currently answers a tool-level refusal with 403 when the call carries a params _meta object' do
         allow(Administrate::MCP::Tools::AdminResourceList).to receive(:required_scopes).and_return([:write])
         body = {
           jsonrpc: '2.0',
@@ -456,7 +458,8 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       end
     end
 
-    context 'with a tool call the admin is not authorized for' do
+    # Current behaviour, not a contract: see https://github.com/sorare/administrate-mcp/issues/11.
+    context 'with a tool call a tool-level gate refuses' do
       let(:rpc_method) { 'tools/call' }
       let(:rpc_id) { 5 }
       let(:tool_name) { 'admin_resource_list' }
@@ -464,7 +467,7 @@ RSpec.describe Administrate::MCP::JsonRpcController do
 
       before { allow(Administrate::MCP::Tools::AdminResourceList).to receive(:required_scopes).and_return([:write]) }
 
-      it 'returns 403 with X-Auth-Error: forbidden and error code -32003' do
+      it 'currently returns 403 with X-Auth-Error: forbidden and error code -32003' do
         post '/', params: body, headers: modern_headers
 
         expect(response).to have_http_status(:forbidden)

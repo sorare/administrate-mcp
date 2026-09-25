@@ -83,7 +83,6 @@ module Administrate
           required: %w[resource]
         )
 
-        # rubocop:disable-next Lint/UnusedMethodArgument
         def self.execute(
           admin:,
           resource:,
@@ -96,7 +95,7 @@ module Administrate
           page: 1,
           per_page: 10
         )
-          entry = find_dashboard_entry!(resource)
+          entry = find_dashboard_entry!(admin, resource)
           dashboard = entry.dashboard_class.new
           per_page = per_page.to_i.clamp(1, MAX_PER_PAGE)
           page = [page.to_i, 1].max

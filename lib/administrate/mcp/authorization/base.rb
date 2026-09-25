@@ -8,10 +8,16 @@ module Administrate
       # Shared role gating. Roles are a host concept: an admin class that does not answer
       # `can_access?` cannot be gated on them, and saying so beats letting the call through.
       class Base
+        # The message the built-in adapters raise. A caller that reformats a denial compares against
+        # it to tell the generic message from one the host wrote.
+        def self.denial_message(action, model_name)
+          "Not authorized to #{action} #{model_name}"
+        end
+
         def authorize!(admin, record_or_class, action)
           return if authorized?(admin, record_or_class, action)
 
-          raise UnauthorizedError, "Not authorized to #{action} #{model_name(record_or_class)}"
+          raise UnauthorizedError, Base.denial_message(action, model_name(record_or_class))
         end
 
         def authorized?(_admin, _record_or_class, _action)
