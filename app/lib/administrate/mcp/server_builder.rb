@@ -35,7 +35,11 @@ module Administrate
               # The host's own route constraints already restrict which Host values reach the
               # controller, and this is not loopback-bound. Passing the incoming request's own host
               # back as `allowed_hosts:` would just validate the Host header against itself.
-              dns_rebinding_protection: false
+              dns_rebinding_protection: false,
+              # `subscriptions/listen` answers with a streaming SSE body that is held open. The
+              # controller buffers the response and builds a stateless transport per request, so it
+              # cannot serve that stream; refusing answers the method as unimplemented (-32601).
+              serve_subscriptions_listen: false
             )
           server
         end

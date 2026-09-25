@@ -404,6 +404,12 @@ RSpec.describe Administrate::MCP::JsonRpcController do
         expect(result['capabilities']).to have_key('tools')
         expect(result.dig('_meta', 'io.modelcontextprotocol/serverInfo', 'name')).to eq('dummy_admin')
       end
+
+      it 'does not advertise list-change notifications it cannot deliver' do
+        post '/', params: body, headers: modern_headers
+
+        expect(response.parsed_body.dig('result', 'capabilities', 'tools')).not_to have_key('listChanged')
+      end
     end
 
     context 'with tools/list' do
@@ -443,6 +449,20 @@ RSpec.describe Administrate::MCP::JsonRpcController do
         result = response.parsed_body['result']
         expect(result['resultType']).to eq('complete')
         expect(JSON.parse(result.dig('content', 0, 'text'))['status']).to eq('created')
+      end
+    end
+
+    context 'with subscriptions/listen' do
+      let(:rpc_method) { 'subscriptions/listen' }
+      let(:rpc_params) { { notifications: { toolsListChanged: true } } }
+
+      it 'answers the method as unimplemented instead of opening a stream' do
+        post '/', params: body, headers: modern_headers
+
+        expect(response).to have_http_status(:not_found)
+        expect(response.media_type).to eq('application/json')
+        expect(response.parsed_body.dig('error', 'code')).to eq(-32_601)
+        expect(response.parsed_body['id']).to eq(rpc_id)
       end
     end
 
