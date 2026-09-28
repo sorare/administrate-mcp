@@ -27,6 +27,14 @@ minor release may change behaviour a host depends on; the entry says so when it 
   as `Administrate::MCP::ResourceForbiddenError`, a subclass of `UnauthorizedError`, so host code
   that rescues `UnauthorizedError` still catches it.
 
+### Fixed
+
+- A `subscriptions/listen` request no longer raises `NoMethodError` in the host's Rack stack. The
+  `mcp` gem answers it with a streaming SSE body meant to stay open, which the engine's controller
+  cannot serve; the transport is now built with `serve_subscriptions_listen: false`, so the method
+  is answered with HTTP 404 and JSON-RPC error `-32601` like any unimplemented method, and
+  `server/discover` stops advertising the `listChanged` and `subscribe` capability flags.
+
 ## [0.2.0] - 2026-09-22
 
 ### Added

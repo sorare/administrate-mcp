@@ -25,6 +25,12 @@ RSpec.describe Administrate::MCP::ServerBuilder do
       expect(server.name).to eq('dummy_admin')
       expect(server.version).to eq('1.2.3')
     end
+
+    it 'builds a transport that does not serve subscriptions/listen' do
+      server = described_class.build(server_context: { admin:, scopes: [] })
+
+      expect(server.transport.serves_subscriptions_listen?).to be(false)
+    end
   end
 
   describe '.discover_tools' do
