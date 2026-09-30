@@ -85,7 +85,25 @@ module Administrate
         end
 
         def exposed_attributes(dashboard, attributes = nil)
-          (attributes || dashboard.show_page_attributes) - DashboardRegistry.skipped_attributes(dashboard)
+          return default_attributes(dashboard, :show_page_attributes) unless attributes
+
+          attributes - DashboardRegistry.skipped_attributes(dashboard)
+        end
+
+        def attribute_names(dashboard, method)
+          value = dashboard.public_send(method)
+          value.is_a?(Hash) ? value.values.flatten : value
+        end
+
+        def on_demand_attributes(dashboard)
+          available = attribute_names(dashboard, :show_page_attributes) -
+                      DashboardRegistry.skipped_attributes(dashboard)
+          DashboardRegistry.on_demand_attributes(dashboard).slice(*available)
+        end
+
+        def default_attributes(dashboard, method)
+          attribute_names(dashboard, method) - DashboardRegistry.skipped_attributes(dashboard) -
+            on_demand_attributes(dashboard).keys
         end
 
         def resolve_columns(dashboard, attributes)
@@ -174,7 +192,7 @@ module Administrate
           return related_records.map(&:to_s) unless dashboard_class
 
           dash = dashboard_class.new
-          related_records.map { |r| serialize(r, dash, attributes: dash.collection_attributes) }
+          related_records.map { |r| serialize(r, dash, attributes: default_attributes(dash, :collection_attributes)) }
         end
 
         def relation_count(relation)

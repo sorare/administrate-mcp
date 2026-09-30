@@ -9,7 +9,9 @@ module Administrate
         tool_name 'admin_resource_list_resources'
         description 'Discover available admin resources. ' \
                     'Without a resource param: returns the resource names you can read (lightweight catalog). ' \
-                    'With a resource param: returns fields and filters for that resource.'
+                    'With a resource param: returns fields and filters for that resource, plus on_demand_fields when ' \
+                    'the resource has any: fields left out by default that must be requested by name ' \
+                    'through admin_resource_show with a single id.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
 
         input_schema(
@@ -65,10 +67,14 @@ module Administrate
           result[:filters] = filters if filters.present?
           expandable = expandable_associations(dashboard)
           result[:expandable] = expandable if expandable.present?
+          on_demand = FieldSerializer.on_demand_attributes(dashboard)
+          result[:on_demand_fields] = on_demand.transform_keys(&:to_s) if on_demand.present?
         end
 
         def self.expandable_associations(dashboard)
+          on_demand = FieldSerializer.on_demand_attributes(dashboard).keys
           dashboard.attribute_types.filter_map do |attr_name, spec|
+            next if on_demand.include?(attr_name)
             next unless FieldSerializer.expandable_field?(FieldSerializer.resolve_field_class(spec))
 
             attr_name.to_s

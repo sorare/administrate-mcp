@@ -103,6 +103,16 @@ RSpec.describe Administrate::MCP::DashboardRegistry do
       expect(described_class.skipped_attributes(WidgetDashboard)).to eq(%i[slug])
     end
 
+    it 'reads MCP_ON_DEMAND_ATTRIBUTES as a hash keyed by symbol' do
+      expect(described_class.on_demand_attributes(WidgetDashboard)).to eq(
+        remote_status: WidgetDashboard::MCP_ON_DEMAND_ATTRIBUTES[:remote_status]
+      )
+    end
+
+    it 'has no on-demand attributes when the dashboard declares none' do
+      expect(described_class.on_demand_attributes(GadgetDashboard)).to eq({})
+    end
+
     it 'uses the model the dashboard declares' do
       allow(WidgetDashboard).to receive(:model).and_return(Gadget)
       described_class.reset!

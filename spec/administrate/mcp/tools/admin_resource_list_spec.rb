@@ -19,6 +19,27 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceList do
       expect(data['meta']).to include('page' => 1, 'per_page' => 10, 'total_count' => 3, 'total_pages' => 1)
     end
 
+    context 'when SHOW_PAGE_ATTRIBUTES is a Hash of groups' do
+      before do
+        stub_const('WidgetDashboard::SHOW_PAGE_ATTRIBUTES', { '' => %i[id name], 'Details' => %i[slug remote_status] })
+      end
+
+      it 'returns the rows without the on-demand field' do
+        data = call(resource: 'widget')
+
+        expect(data['columns']).to eq(%w[url id name status])
+        expect(data['rows'].size).to eq(3)
+      end
+    end
+
+    it 'refuses an on-demand field' do
+      result = described_class.call(server_context:, resource: 'widget', fields: %w[remote_status])
+
+      expect(result.content.first[:text]).to include(
+        'Field `remote_status` is resolved on demand, only by admin_resource_show with a single id.'
+      )
+    end
+
     it 'caps per_page at the maximum' do
       expect(call(resource: 'widget', per_page: 500)['meta']['per_page']).to eq(described_class::MAX_PER_PAGE)
     end

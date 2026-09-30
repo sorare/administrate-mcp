@@ -5,6 +5,9 @@ require 'administrate/base_dashboard'
 class WidgetDashboard < Administrate::BaseDashboard
   MCP_DESCRIPTION = 'Widgets, the dummy app resource used to exercise the engine.'
   MCP_BASE_SCOPE = -> { Widget.unscope(where: :status) }
+  MCP_ON_DEMAND_ATTRIBUTES = {
+    remote_status: 'Status fetched live from a remote service; request it by name.'
+  }.freeze
 
   COLLECTION_FILTERS = {
     published: ->(scope) { scope.where(status: :published) },
@@ -22,11 +25,13 @@ class WidgetDashboard < Administrate::BaseDashboard
     gadgets: Field::HasMany,
     created_at: Field::DateTime,
     updated_at: Field::DateTime,
-    secret: Field::Password
+    secret: Field::Password,
+    remote_status: Field::String.with_options(getter: ->(field) { "remote-#{field.resource.name}" })
   }.freeze
 
   COLLECTION_ATTRIBUTES = %i[id name status].freeze
-  SHOW_PAGE_ATTRIBUTES = %i[id name slug status price featured admin gadgets created_at updated_at secret].freeze
+  SHOW_PAGE_ATTRIBUTES = %i[id name slug status price featured admin gadgets created_at updated_at secret
+                            remote_status].freeze
   FORM_ATTRIBUTES = %i[name status price featured].freeze
   COLLECTION_FILTERS_ORDER = [].freeze
 

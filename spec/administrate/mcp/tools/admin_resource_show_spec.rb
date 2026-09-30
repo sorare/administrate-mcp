@@ -42,6 +42,60 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceShow do
       expect(data['gadgets']['items'].size).to eq(1)
     end
 
+    describe 'on-demand attributes' do
+      it 'leaves them out of a default single show' do
+        expect(call(resource: 'widget', id: widget.id)).not_to have_key('remote_status')
+      end
+
+      it 'resolves them when a single show names them' do
+        data = call(resource: 'widget', id: widget.id, fields: %w[id remote_status])
+
+        expect(data).to include('remote_status' => "remote-#{widget.name}")
+      end
+
+      it 'leaves them out of a default batch show' do
+        data = call(resource: 'widget', id: [widget.id])
+
+        expect(data['columns']).not_to include('remote_status')
+      end
+
+      it 'refuses them in a batch show' do
+        result = described_class.call(server_context:, resource: 'widget', id: [widget.id],
+                                      fields: %w[id remote_status])
+
+        expect(result.content.first[:text]).to include(
+          'Field `remote_status` is resolved on demand, only by admin_resource_show with a single id.'
+        )
+      end
+
+      it 'reports a skipped one as unknown' do
+        stub_const('WidgetDashboard::MCP_SKIPPED_ATTRIBUTES', %i[remote_status])
+
+        result = described_class.call(server_context:, resource: 'widget', id: widget.id, fields: %w[remote_status])
+
+        expect(result.content.first[:text]).to include('Unknown fields: remote_status')
+      end
+    end
+
+    context 'when SHOW_PAGE_ATTRIBUTES is a Hash of groups' do
+      before do
+        stub_const('WidgetDashboard::SHOW_PAGE_ATTRIBUTES', { '' => %i[id name], 'Details' => %i[slug remote_status] })
+      end
+
+      it 'returns the grouped attributes without the on-demand one' do
+        data = call(resource: 'widget', id: widget.id)
+
+        expect(data).to include('id' => widget.id, 'name' => widget.name, 'slug' => widget.slug)
+        expect(data).not_to have_key('remote_status')
+      end
+
+      it 'resolves an on-demand attribute named in the grouped attributes' do
+        data = call(resource: 'widget', id: widget.id, fields: %w[remote_status])
+
+        expect(data).to include('remote_status' => "remote-#{widget.name}")
+      end
+    end
+
     it_behaves_like 'a tool reporting resource errors', verb: 'show', arguments: { id: 'any' }
 
     describe 'batch lookup' do

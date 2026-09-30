@@ -5,6 +5,21 @@ RSpec.describe Administrate::MCP::FieldSerializer do
   let(:widget) { create(:widget, admin:, status: :published, price: 42, featured: true) }
   let(:dashboard) { WidgetDashboard.new }
 
+  describe '.on_demand_attributes' do
+    it 'lets a skipped attribute win' do
+      stub_const('WidgetDashboard::MCP_SKIPPED_ATTRIBUTES', %i[remote_status])
+
+      expect(described_class.on_demand_attributes(dashboard)).to eq({})
+    end
+
+    it 'ignores an attribute that is not on the show page' do
+      stub_const('WidgetDashboard::MCP_ON_DEMAND_ATTRIBUTES', { remote_status: 'x', id: 'y', missing: 'z' }.freeze)
+      stub_const('WidgetDashboard::SHOW_PAGE_ATTRIBUTES', %i[id name].freeze)
+
+      expect(described_class.on_demand_attributes(dashboard).keys).to eq(%i[id])
+    end
+  end
+
   describe '.serialize' do
     it 'returns a hash of serialized fields' do
       result = described_class.serialize(widget, dashboard)

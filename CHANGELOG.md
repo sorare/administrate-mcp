@@ -8,6 +8,15 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Added
+
+- A dashboard can declare `MCP_ON_DEMAND_ATTRIBUTES = { attribute: 'description' }` for attributes
+  that are slow or call an external service. They are left out of every default read and resolved,
+  getters included, only when `admin_resource_show` is given a single id and names them in
+  `fields`. The `admin_resource_list_resources` detail lists them under a new `on_demand_fields` key,
+  as a name to description map. Requesting one in batch `admin_resource_show` or in
+  `admin_resource_list` returns an error instead of a value.
+
 ### Changed
 
 - **Behaviour change for clients:** two failures of `admin_resource_list_resources`,
@@ -29,6 +38,8 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ### Fixed
 
+- `admin_resource_show` no longer fails with an internal error on a dashboard whose
+  `SHOW_PAGE_ATTRIBUTES` is a Hash of groups, which Administrate allows. The groups are flattened.
 - A `subscriptions/listen` request no longer raises `NoMethodError` in the host's Rack stack. The
   `mcp` gem answers it with a streaming SSE body meant to stay open, which the engine's controller
   cannot serve; the transport is now built with `serve_subscriptions_listen: false`, so the method

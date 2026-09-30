@@ -103,18 +103,33 @@ module Administrate
             "(+#{allowed.size - LISTED_VALID_VALUES} more, see admin_resource_list_resources)"
         end
 
-        def resolve_attributes(dashboard, fields, default_method)
-          return dashboard.public_send(default_method) if fields.blank?
+        def resolve_attributes(dashboard, fields, default_method, on_demand: false)
+          return FieldSerializer.default_attributes(dashboard, default_method) if fields.blank?
 
-          reject_unknown!('fields', fields, FieldSerializer.exposed_attributes(dashboard))
+          on_demand_names = FieldSerializer.on_demand_attributes(dashboard).keys
+          reject_on_demand!(fields, on_demand_names) unless on_demand
+          allowed = FieldSerializer.exposed_attributes(dashboard)
+          allowed += on_demand_names if on_demand
+          reject_unknown!('fields', fields, allowed)
 
           fields.map(&:to_sym)
         end
 
+        def reject_on_demand!(fields, on_demand_names)
+          requested = Array.wrap(fields).map(&:to_s) & on_demand_names.map(&:to_s)
+          return if requested.empty?
+
+          noun = requested.size == 1 ? 'Field' : 'Fields'
+          verb = requested.size == 1 ? 'is' : 'are'
+          names = requested.map { |name| "`#{name}`" }.join(', ')
+          raise InvalidArgumentError,
+                "#{noun} #{names} #{verb} resolved on demand, only by admin_resource_show with a single id."
+        end
+
         # An expansion only applies to an attribute the response carries, so an expanded association
         # is added to the returned attributes rather than quietly doing nothing.
-        def resolve_attributes_and_expansions(dashboard, fields, expand, default_method, max_expand)
-          attrs = resolve_attributes(dashboard, fields, default_method)
+        def resolve_attributes_and_expansions(dashboard, fields, expand, default_method, max_expand, on_demand: false)
+          attrs = resolve_attributes(dashboard, fields, default_method, on_demand:)
           expand_set = validated_expand_set(dashboard, expand, attrs, max_expand)
           return attrs, nil unless expand_set
 

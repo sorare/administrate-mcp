@@ -41,7 +41,9 @@ module Administrate
                     'list — that error means the ids never reached the batch path, not that they are wrong, ' \
                     'so re-send them as an array rather than falling back to single calls. ' \
                     'Attributes a dashboard computes per record are not resolved in batch mode and come back ' \
-                    'as "[error: could not serialize <field>]" — pass a single ID when you need one of those.'
+                    'as "[error: could not serialize <field>]" — pass a single ID when you need one of those. ' \
+                    'Fields listed under on_demand_fields in admin_resource_list_resources are refused in ' \
+                    'batch mode.'
                 }
               ]
             },
@@ -50,7 +52,10 @@ module Administrate
               items: {
                 type: 'string'
               },
-              description: 'Specific fields to return (optional). Returns all fields if omitted.'
+              description:
+                'Specific fields to return (optional). Returns all fields if omitted, except the fields ' \
+                'listed under on_demand_fields in admin_resource_list_resources: those are left out ' \
+                'and returned only when named here with a single id.'
             },
             expand: {
               type: 'array',
@@ -76,7 +81,9 @@ module Administrate
           entry = find_dashboard_entry!(admin, resource)
           dashboard = entry.dashboard_class.new
           attrs, expand_set =
-            resolve_attributes_and_expansions(dashboard, fields, expand, :show_page_attributes, MAX_EXPAND)
+            resolve_attributes_and_expansions(
+              dashboard, fields, expand, :show_page_attributes, MAX_EXPAND, on_demand: !id.is_a?(Array)
+            )
 
           return batch_show(entry, dashboard, id, resource, attributes: attrs, expand: expand_set) if id.is_a?(Array)
 
