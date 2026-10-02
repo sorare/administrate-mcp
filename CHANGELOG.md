@@ -8,6 +8,8 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-02
+
 ### Changed
 
 - **Behaviour change for clients:** two failures of `admin_resource_list_resources`,
@@ -115,6 +117,7 @@ minor release may change behaviour a host depends on; the entry says so when it 
   took the gem from git before 0.1.0 must reinstall its migrations rather than migrate
   incrementally.
 
-[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/sorare/administrate-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sorare/administrate-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sorare/administrate-mcp/releases/tag/v0.1.0
