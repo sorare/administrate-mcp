@@ -17,6 +17,13 @@ class OrderDashboard < Administrate::BaseDashboard
              params: { reason: { type: 'string', description: 'Why the order is being refunded.' } } do |record:, admin:, params:|
     Orders::Refund.call!(order: record, admin:, reason: params[:reason])
   end
+
+  mcp_action :import,
+             on: :collection,
+             description: 'Import an order from a marketplace.',
+             params: { reference: 'The marketplace order reference.' } do |admin:, params:|
+    Orders::Import.call!(reference: params[:reference], admin:)
+  end
 end
 ```
 
@@ -33,10 +40,18 @@ base class, is not applied to every resource. A subclass that wants one declares
   `scoped_resource`.
 - `COLLECTION_FILTERS` are published as filters; a one-argument lambda is a boolean filter, a
   two-argument one takes a value. Foreign key columns are filterable without being declared.
-- `mcp_action` publishes one tool per declaration. It requires the OAuth `write` scope, and the
-  authorization predicate (`refund?` by default, or `predicate:`) on the loaded record. The block
-  receives `record:`, `admin:` and `params:`; a result answering `success? == false` is reported as
-  an error.
+- `mcp_action` publishes one tool per declaration, named `<resource>_<action>` (`order_refund`). It
+  requires the OAuth `write` scope, and the authorization predicate (`refund?` by default, or
+  `predicate:`, also spelled `pundit:`), checked through `config.authorization`. Every call is
+  reported to `config.on_tool_call`, and a result answering `success? == false` is reported as an
+  error, with the result's `error` as the message when it has one.
+  - A member action (`on: :member`, the default) takes an `id` (or slug), loads the record and checks
+    the predicate against it. The block receives `record:`, `admin:` and `params:`.
+  - A collection action (`on: :collection`) takes no `id` and loads nothing, so it suits creating a
+    record or preparing something that is not a record yet. The predicate, `create?` by default, is
+    checked against the model class, both when the tool list is built and on every call. The block
+    receives `admin:` and `params:`. When it returns an Active Record object, the response carries
+    that record's `id`, so the client can act on what it just created.
 
 ## Search
 

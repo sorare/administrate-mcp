@@ -8,6 +8,17 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Added
+
+- Collection-level write actions: `mcp_action name, on: :collection, ...` publishes a tool with no
+  `id` in its input schema. Nothing is loaded; the block receives `admin:` and `params:`, and the
+  authorization predicate, `create?` by default and overridable with `predicate:` or `pundit:`, is
+  checked against the model class through `config.authorization`, when the tool list is built and
+  on every call. The `write` scope gate, the `on_tool_call` audit and the `success? == false` error
+  reporting work as for member actions, and the tool keeps the `<resource>_<action>` name. When the
+  block returns an Active Record object, the response includes its `id`. `on: :member` stays the
+  default, so existing declarations are unchanged.
+
 ## [0.3.1] - 2026-10-20
 
 ### Security
