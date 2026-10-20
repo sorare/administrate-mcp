@@ -9,7 +9,7 @@ module Administrate
         tool_name 'admin_resource_list_resources'
         description 'Discover available admin resources. ' \
                     'Without a resource param: returns the resource names you can read (lightweight catalog). ' \
-                    'With a resource param: returns fields and filters for that resource.'
+                    'With a resource param: returns fields, filters and on-demand fields for that resource.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
 
         input_schema(
@@ -65,6 +65,8 @@ module Administrate
           result[:filters] = filters if filters.present?
           expandable = expandable_associations(dashboard)
           result[:expandable] = expandable if expandable.present?
+          on_demand = DashboardRegistry.on_demand_attributes(dashboard).map(&:to_s)
+          result[:on_demand_fields] = on_demand if on_demand.present?
         end
 
         def self.expandable_associations(dashboard)

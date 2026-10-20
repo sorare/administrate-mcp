@@ -85,7 +85,15 @@ module Administrate
         end
 
         def exposed_attributes(dashboard, attributes = nil)
-          (attributes || dashboard.show_page_attributes) - DashboardRegistry.skipped_attributes(dashboard)
+          return attributes - DashboardRegistry.skipped_attributes(dashboard) if attributes
+
+          default_attributes(dashboard, :show_page_attributes)
+        end
+
+        def default_attributes(dashboard, page_attributes_method)
+          dashboard.public_send(page_attributes_method) -
+            DashboardRegistry.skipped_attributes(dashboard) -
+            DashboardRegistry.on_demand_attributes(dashboard)
         end
 
         def resolve_columns(dashboard, attributes)

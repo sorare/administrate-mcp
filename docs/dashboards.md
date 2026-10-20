@@ -27,6 +27,11 @@ base class, is not applied to every resource. A subclass that wants one declares
 - `MCP_DESCRIPTION` tells the client what the resource is.
 - `MCP_SKIPPED_ATTRIBUTES = %i[email]` keeps attributes visible in the admin UI but out of MCP
   reads, listings and field selection.
+- `MCP_ON_DEMAND_ATTRIBUTES = %i[history]` lists attributes that are costly to compute.
+  `admin_resource_show` returns them only when they are requested by name in `fields`, even if the
+  show page does not list them, and leaves them out otherwise. `admin_resource_list` never returns
+  them, and `admin_resource_list_resources` reports them under `on_demand_fields`. An attribute in
+  `MCP_SKIPPED_ATTRIBUTES` stays hidden.
 - `MCP_EXPOSED = false` leaves the dashboard out of the MCP registry entirely.
 - Namespaced models work through the dashboard's own `self.model`, as in Administrate.
 - `MCP_BASE_SCOPE` replaces the model's default scope for MCP reads, mirroring an admin controller's

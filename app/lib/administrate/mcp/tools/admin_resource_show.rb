@@ -50,7 +50,10 @@ module Administrate
               items: {
                 type: 'string'
               },
-              description: 'Specific fields to return (optional). Returns all fields if omitted.'
+              description:
+                'Specific fields to return (optional). Returns all fields if omitted, except the ' \
+                'on_demand_fields admin_resource_list_resources lists for the resource: those are ' \
+                'computed per call and only returned when requested by name here.'
             },
             expand: {
               type: 'array',
@@ -76,7 +79,9 @@ module Administrate
           entry = find_dashboard_entry!(admin, resource)
           dashboard = entry.dashboard_class.new
           attrs, expand_set =
-            resolve_attributes_and_expansions(dashboard, fields, expand, :show_page_attributes, MAX_EXPAND)
+            resolve_attributes_and_expansions(
+              dashboard, fields, expand, :show_page_attributes, MAX_EXPAND, on_demand: true
+            )
 
           return batch_show(entry, dashboard, id, resource, attributes: attrs, expand: expand_set) if id.is_a?(Array)
 

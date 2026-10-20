@@ -50,6 +50,29 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceListResources do
         end
       end
 
+      context 'with MCP_ON_DEMAND_ATTRIBUTES' do
+        before { stub_const('WidgetDashboard::MCP_ON_DEMAND_ATTRIBUTES', %i[price]) }
+
+        it 'advertises the on-demand attribute apart from the default fields' do
+          detail = call(resource: 'widget')
+
+          expect(detail['fields']).not_to include('price')
+          expect(detail['on_demand_fields']).to eq(['price'])
+        end
+
+        it 'does not advertise an on-demand attribute MCP_SKIPPED_ATTRIBUTES hides' do
+          stub_const('WidgetDashboard::MCP_SKIPPED_ATTRIBUTES', %i[price])
+
+          expect(call(resource: 'widget')).not_to have_key('on_demand_fields')
+        end
+
+        it 'does not advertise an on-demand name the dashboard has no attribute for' do
+          stub_const('WidgetDashboard::MCP_ON_DEMAND_ATTRIBUTES', %i[nope])
+
+          expect(call(resource: 'widget')).not_to have_key('on_demand_fields')
+        end
+      end
+
       it_behaves_like 'a tool reporting resource errors', verb: 'list'
     end
   end

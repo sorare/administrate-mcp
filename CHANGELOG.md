@@ -8,6 +8,14 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Added
+
+- `MCP_ON_DEMAND_ATTRIBUTES` on a dashboard lists attributes that `admin_resource_show` returns only
+  when they are requested by name in `fields`, single or batch, even if the show page does not list
+  them. They are left out of a show without `fields`, cannot be requested, sorted or listed through
+  `admin_resource_list`, and `admin_resource_list_resources` reports them under `on_demand_fields`
+  instead of `fields`. Use them for attributes that are too costly to compute on every read.
+
 ## [0.3.1] - 2026-10-20
 
 ### Security

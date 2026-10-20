@@ -103,18 +103,22 @@ module Administrate
             "(+#{allowed.size - LISTED_VALID_VALUES} more, see admin_resource_list_resources)"
         end
 
-        def resolve_attributes(dashboard, fields, default_method)
-          return dashboard.public_send(default_method) if fields.blank?
+        # On-demand attributes are only requestable where the caller opts in, so a listing cannot run
+        # their per-record work once per row.
+        def resolve_attributes(dashboard, fields, default_method, on_demand: false)
+          return FieldSerializer.default_attributes(dashboard, default_method) if fields.blank?
 
-          reject_unknown!('fields', fields, FieldSerializer.exposed_attributes(dashboard))
+          allowed = FieldSerializer.exposed_attributes(dashboard)
+          allowed |= DashboardRegistry.on_demand_attributes(dashboard) if on_demand
+          reject_unknown!('fields', fields, allowed)
 
           fields.map(&:to_sym)
         end
 
         # An expansion only applies to an attribute the response carries, so an expanded association
         # is added to the returned attributes rather than quietly doing nothing.
-        def resolve_attributes_and_expansions(dashboard, fields, expand, default_method, max_expand)
-          attrs = resolve_attributes(dashboard, fields, default_method)
+        def resolve_attributes_and_expansions(dashboard, fields, expand, default_method, max_expand, on_demand: false)
+          attrs = resolve_attributes(dashboard, fields, default_method, on_demand:)
           expand_set = validated_expand_set(dashboard, expand, attrs, max_expand)
           return attrs, nil unless expand_set
 

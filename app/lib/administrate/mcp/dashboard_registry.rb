@@ -5,7 +5,8 @@ module Administrate
     # Maps resource names (e.g. "card", "card_factory/card_sample") to their dashboard and model
     # classes. Dashboards can declare MCP_DESCRIPTION to provide a human-readable description for
     # LLM tool discovery, MCP_BASE_SCOPE (a proc returning a relation) to override the model's
-    # default scope, MCP_SKIPPED_ATTRIBUTES to keep attributes out of MCP reads, and
+    # default scope, MCP_SKIPPED_ATTRIBUTES to keep attributes out of MCP reads,
+    # MCP_ON_DEMAND_ATTRIBUTES to return attributes only when a show call asks for them by name, and
     # MCP_EXPOSED = false to leave the resource out of the registry altogether.
     # default scope for MCP reads — mirroring an admin controller's custom scoped_resource.
     class DashboardRegistry
@@ -80,11 +81,21 @@ module Administrate
         end
 
         def skipped_attributes(dashboard)
+          declared_attributes(dashboard, :MCP_SKIPPED_ATTRIBUTES)
+        end
+
+        def on_demand_attributes(dashboard)
           dashboard_class = dashboard.is_a?(Class) ? dashboard : dashboard.class
-          Array(dashboard_constant(dashboard_class, :MCP_SKIPPED_ATTRIBUTES)).map(&:to_sym)
+          (declared_attributes(dashboard, :MCP_ON_DEMAND_ATTRIBUTES) & dashboard_class::ATTRIBUTE_TYPES.keys) -
+            skipped_attributes(dashboard)
         end
 
         private
+
+        def declared_attributes(dashboard, name)
+          dashboard_class = dashboard.is_a?(Class) ? dashboard : dashboard.class
+          Array(dashboard_constant(dashboard_class, name)).map(&:to_sym)
+        end
 
         def dashboard_roots
           Administrate::MCP.config.dashboard_directories

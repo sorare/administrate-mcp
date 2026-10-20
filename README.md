@@ -215,7 +215,7 @@ helper adds: [docs/routes.md](docs/routes.md).
 
 ## Dashboard declarations
 
-`MCP_DESCRIPTION`, `MCP_BASE_SCOPE`, `MCP_SKIPPED_ATTRIBUTES`, `MCP_EXPOSED`, `COLLECTION_FILTERS`
+`MCP_DESCRIPTION`, `MCP_BASE_SCOPE`, `MCP_SKIPPED_ATTRIBUTES`, `MCP_ON_DEMAND_ATTRIBUTES`, `MCP_EXPOSED`, `COLLECTION_FILTERS`
 and `mcp_action`, the constants and macro that turn one dashboard into an MCP resource with its own
 readable fields and writable actions: [docs/dashboards.md](docs/dashboards.md).
 

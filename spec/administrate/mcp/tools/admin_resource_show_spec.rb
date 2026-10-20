@@ -42,6 +42,39 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceShow do
       expect(data['gadgets']['items'].size).to eq(1)
     end
 
+    describe 'MCP_ON_DEMAND_ATTRIBUTES' do
+      before { stub_const('WidgetDashboard::MCP_ON_DEMAND_ATTRIBUTES', %i[price]) }
+
+      it 'leaves an on-demand attribute out of the default response' do
+        expect(call(resource: 'widget', id: widget.id)).not_to have_key('price')
+      end
+
+      it 'returns an on-demand attribute requested by name' do
+        expect(call(resource: 'widget', id: widget.id, fields: %w[id price])).to include('price' => widget.price)
+      end
+
+      it 'returns an on-demand attribute the show page does not list' do
+        stub_const('WidgetDashboard::SHOW_PAGE_ATTRIBUTES', %i[id name])
+
+        expect(call(resource: 'widget', id: widget.id, fields: %w[price])).to include('price' => widget.price)
+      end
+
+      it 'returns an on-demand attribute in batch mode' do
+        data = call(resource: 'widget', id: [widget.id], fields: %w[id price])
+
+        expect(data['columns']).to eq(%w[url id price])
+        expect(data['rows'].first.last).to eq(widget.price)
+      end
+
+      it 'keeps an attribute MCP_SKIPPED_ATTRIBUTES hides out of reach' do
+        stub_const('WidgetDashboard::MCP_SKIPPED_ATTRIBUTES', %i[price])
+
+        result = described_class.call(server_context:, resource: 'widget', id: widget.id, fields: %w[price])
+
+        expect(result.content.first[:text]).to include('Unknown fields: price')
+      end
+    end
+
     it_behaves_like 'a tool reporting resource errors', verb: 'show', arguments: { id: 'any' }
 
     describe 'batch lookup' do

@@ -92,6 +92,29 @@ RSpec.describe Administrate::MCP::Tools::AdminResourceList do
       end
     end
 
+    describe 'MCP_ON_DEMAND_ATTRIBUTES' do
+      before do
+        stub_const('WidgetDashboard::MCP_ON_DEMAND_ATTRIBUTES', %i[price])
+        stub_const('WidgetDashboard::COLLECTION_ATTRIBUTES', %i[id name price])
+      end
+
+      it 'leaves an on-demand attribute out of the default columns' do
+        expect(call(resource: 'widget')['columns']).to eq(%w[url id name])
+      end
+
+      it 'rejects an on-demand attribute requested by name' do
+        result = described_class.call(server_context:, resource: 'widget', fields: %w[price])
+
+        expect(result.content.first[:text]).to include('Unknown fields: price')
+      end
+
+      it 'rejects a sort on an on-demand attribute' do
+        result = described_class.call(server_context:, resource: 'widget', sort: 'price')
+
+        expect(result.content.first[:text]).to include('Unknown sort fields: price')
+      end
+    end
+
     describe 'sorting' do
       it 'sorts by a dashboard attribute' do
         names = call(resource: 'widget', sort: 'name', sort_direction: 'asc')['rows'].pluck(2)
