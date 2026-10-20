@@ -27,6 +27,9 @@ module Administrate
           keyword_init: true
         )
 
+      # Keywords the generated tool and the action block already use; a declared param can't take them.
+      RESERVED_PARAMS = %i[admin record params id].freeze
+
       class << self
         # Normalizes the arguments of a `mcp_action` declaration into a spec (everything but the
         # model, which is inferred from the owning dashboard when definitions are built).
@@ -34,6 +37,7 @@ module Administrate
                        destructive: true, &invoke)
           raise ArgumentError, "#{name}: a block is required to invoke the action" unless invoke
 
+          reject_reserved_params!(name, params)
           normalized = normalize_params(params)
 
           {
@@ -97,6 +101,11 @@ module Administrate
 
         private
 
+        def reject_reserved_params!(name, params)
+          reserved = RESERVED_PARAMS & params.keys.map(&:to_sym)
+          raise ArgumentError, "#{name}: reserved param name(s): #{reserved.join(', ')}" if reserved.any?
+        end
+
         def authorized_for_discovery?(admin, definition)
           Administrate::MCP.config.authorization.authorized?(admin, definition.model_class, definition.predicate)
         rescue StandardError
@@ -130,7 +139,7 @@ module Administrate
           def schema_for(defn, resource)
             properties = { id: { type: 'string', description: "ID or slug of the #{resource}" } }
             defn.params.each { |name, spec| properties[name] = spec }
-            { properties:, required: %w[id] + defn.required.map(&:to_s) }
+            { properties:, required: %w[id] + defn.required.map(&:to_s), additionalProperties: false }
           end
 
           # Replaces the role-based default with instance-level authorization on the loaded record.

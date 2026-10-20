@@ -8,6 +8,9 @@ module Administrate
       ResourceForbiddenError = Administrate::MCP::ResourceForbiddenError
       InvalidArgumentError = Administrate::MCP::InvalidArgumentError
 
+      # Keywords the server supplies to `execute` itself; a client argument by these names is refused.
+      RESERVED_ARGUMENTS = %i[admin].freeze
+
       class << self
         def requires_roles(*roles)
           @required_roles = roles.flatten
@@ -43,11 +46,20 @@ module Administrate
         end
 
         def call_with_context(server_context, **args)
+          reject_reserved_arguments!(args)
           admin = server_context[:admin]
           check_scopes!(server_context)
           check_roles!(admin, **args)
           audit!(admin, args, server_context)
-          execute(admin:, **args)
+          # The authenticated admin comes last so that no argument can ever replace it.
+          execute(**args, admin:)
+        end
+
+        def reject_reserved_arguments!(args)
+          reserved = RESERVED_ARGUMENTS & args.keys.map(&:to_sym)
+          return if reserved.empty?
+
+          raise InvalidArgumentError, "Reserved argument(s) cannot be passed: #{reserved.join(', ')}"
         end
 
         def check_scopes!(server_context)
