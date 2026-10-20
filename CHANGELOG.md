@@ -8,6 +8,22 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Security
+
+- A `tools/call` argument named `admin` no longer replaces the authenticated admin passed to a
+  tool's `execute` and to `mcp_action` blocks
+  ([GHSA-vv7c-hhjc-fhq8](https://github.com/sorare/administrate-mcp/security/advisories/GHSA-vv7c-hhjc-fhq8)).
+  The call is now refused with a tool error after the scope and role checks, and the `on_tool_call`
+  hook still reports it under the authenticated admin, with the refused argument in `arguments`.
+
+### Changed
+
+- **Behaviour change for hosts:** a tool that declares an input property named `admin` now raises
+  `ArgumentError` when its class is loaded, and an `mcp_action` param named `admin` or `id` raises
+  `ArgumentError` when the dashboard is loaded. Rename the property or param.
+- **Behaviour change for clients:** the tools generated from `mcp_action` declarations now reject
+  arguments they do not declare, with an `Invalid arguments` tool error, instead of passing them to the block in `params`.
+
 ## [0.3.0] - 2026-10-02
 
 ### Changed
