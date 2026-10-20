@@ -18,6 +18,18 @@ minor release may change behaviour a host depends on; the entry says so when it 
   the `on_tool_call` audit and the error reporting work as for member actions, and the tool keeps
   the `<resource>_<action>` name. When the block returns an Active Record object, the response
   includes its primary key as `id`. `on: :member` stays the default.
+- Presigned uploads, off until `config.uploads.enabled` is set. The `uploads_prepare` tool takes
+  `files`, an object of filename to size in bytes, records an `administrate_mcp_upload_batches` row
+  and returns `{ filename => { upload_id, url, headers } }`, one presigned `PUT` per file. An
+  `mcp_action` declared with `uploads: true`, or a list of attributes, takes an optional
+  `<attribute>_upload_id` for each attribute whose field is serialized as `:attachment`; the engine
+  resolves it and the block receives the file as `params[:<attribute>]`. Resolving checks the
+  owning admin (another admin's id is not found), the batch expiry, that the file was uploaded, and
+  its real content type and size, because a presigned `PUT` does not limit the size. The storage
+  defaults to the Shrine `:cache` storage when Shrine is loaded and can be replaced through
+  `config.uploads.storage`; types (png, jpeg, webp), maximum size (10 MB), URL lifetime (15 minutes)
+  and batch lifetime (1 hour) are configurable. The gem gains no dependency. Hosts that enable
+  uploads need the new migration (`bin/rails administrate_mcp:install:migrations`).
 
 ### Changed
 

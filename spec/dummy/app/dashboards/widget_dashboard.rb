@@ -22,7 +22,8 @@ class WidgetDashboard < Administrate::BaseDashboard
     gadgets: Field::HasMany,
     created_at: Field::DateTime,
     updated_at: Field::DateTime,
-    secret: Field::Password
+    secret: Field::Password,
+    picture: PictureField
   }.freeze
 
   COLLECTION_ATTRIBUTES = %i[id name status].freeze
@@ -34,9 +35,10 @@ class WidgetDashboard < Administrate::BaseDashboard
              on: :collection,
              predicate: :create?,
              destructive: false,
+             uploads: true,
              description: 'Create a draft widget.',
              params: { name: 'The name of the new widget.' } do |admin:, params:|
-    Widget.create!(name: params[:name], admin:, status: :draft)
+    Widget.create!(name: params[:name], admin:, status: :draft, picture: params[:picture])
   end
 
   def display_resource(widget)

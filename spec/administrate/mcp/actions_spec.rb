@@ -349,4 +349,75 @@ RSpec.describe Administrate::MCP::Actions do
       end
     end
   end
+
+  describe 'an action declared with uploads' do
+    include_context 'with presignable storage'
+
+    let(:ctx) { { admin:, scopes: ['write'] } }
+    let(:create_draft) { described_class.all_tools.find { |t| t.name_value == 'widget_create_draft' } }
+
+    def upload_png(as: admin)
+      uploads = Administrate::MCP::Uploads.prepare(admin: as, files: { 'logo.png' => png.bytesize })
+      upload_id = uploads['logo.png'][:upload_id]
+      put_object("#{upload_id}.png", png)
+      upload_id
+    end
+
+    def build_member_tool(uploads:, &block)
+      spec = described_class.build_spec(:repaint, description: 'Repaint', uploads:, &block)
+      uploads = Administrate::MCP::Uploads.action_attributes(WidgetDashboard, :repaint, spec[:uploads])
+      described_class::ToolFactory.build(described_class::Definition.new(model_class: Widget, **spec, uploads:))
+    end
+
+    it 'publishes an optional upload_id param for each attachment attribute' do
+      schema = create_draft.input_schema.to_h
+
+      expect(schema[:properties]).to include(picture_upload_id: hash_including(type: 'string'))
+      expect(schema[:required]).to eq(%w[name])
+    end
+
+    it 'sets the attribute from the uploaded file' do
+      result = create_draft.call(name: 'Fresh', picture_upload_id: upload_png, server_context: ctx)
+
+      expect(result.error?).to be(false)
+      picture = Widget.find_by!(name: 'Fresh').picture
+      expect(picture).to have_attributes(mime_type: 'image/png', size: png.bytesize, original_filename: 'logo.png')
+      expect(picture.read).to eq(png)
+    end
+
+    it 'leaves the attribute out when no upload_id is given' do
+      create_draft.call(name: 'Fresh', server_context: ctx)
+
+      expect(Widget.find_by!(name: 'Fresh').picture).to be_nil
+    end
+
+    it "refuses another admin's upload before running the block" do
+      result = create_draft.call(name: 'Fresh', picture_upload_id: upload_png(as: create(:admin)), server_context: ctx)
+
+      expect(result.error?).to be(true)
+      expect(result.content.first[:text]).to match(/Upload .* not found/)
+      expect(Widget.where(name: 'Fresh')).not_to exist
+    end
+
+    it 'hands the resolved value to a member action as params[attribute]' do
+      widget = create(:widget)
+      tool = build_member_tool(uploads: [:picture]) { |record:, params:, **| record.update!(picture: params[:picture]) }
+
+      tool.call(id: widget.id, picture_upload_id: upload_png, server_context: ctx)
+
+      expect(widget.reload.picture.read).to eq(png)
+    end
+
+    it 'refuses an uploads: entry that is not an attachment attribute' do
+      expect { build_member_tool(uploads: [:name]) { |**| true } }
+        .to raise_error(ArgumentError, /uploads: names name, which are not attachment attributes/)
+    end
+
+    it 'publishes no upload param while uploads are disabled' do
+      Administrate::MCP.config.uploads.enabled = false
+      described_class.reset!
+
+      expect(create_draft.input_schema.to_h[:properties].keys).to eq([:name])
+    end
+  end
 end

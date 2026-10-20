@@ -202,6 +202,7 @@ end
 | `skipped_field_classes`     | Password                           | Field class names never serialized                                                                                                                                               |
 | `has_many_field_classes`    | HasMany                            | Field class names treated as expandable collections                                                                                                                              |
 | `field_serializers`         | see above                          | Field class name to serializer                                                                                                                                                   |
+| `uploads`                   | disabled                           | Presigned uploads: `enabled`, `storage`, `allowed_content_types`, `max_size`, `url_ttl`, `batch_ttl`. See [Presigned uploads](uploads.md)                                    |
 
 ## Authorization adapters
 

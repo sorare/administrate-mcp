@@ -16,6 +16,8 @@ module Administrate
 
       SIDEKIQ_STATS_TOOL = 'Administrate::MCP::Tools::SidekiqStats'
 
+      UPLOADS_PREPARE_TOOL = 'Administrate::MCP::Tools::UploadsPrepare'
+
       class << self
         def build(server_context:)
           server_context[:authorization_errors] ||= []
@@ -52,6 +54,7 @@ module Administrate
         def built_in_tools
           names = BUILT_IN_TOOLS.dup
           names << REPORT_IMPROVEMENT_TOOL if Administrate::MCP.config.feedback_tool
+          names << UPLOADS_PREPARE_TOOL if Administrate::MCP.config.uploads.enabled
           names << SIDEKIQ_RETRIES_TOOL if defined?(::Sidekiq)
           names << SIDEKIQ_STATS_TOOL if defined?(::Sidekiq) && Administrate::MCP.config.sidekiq_stats_provider
           names.filter_map(&:safe_constantize)

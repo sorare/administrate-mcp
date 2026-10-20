@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class Widget < ApplicationRecord
+  include PictureUploader::Attachment(:picture)
+
   belongs_to :admin, optional: true
   has_many :gadgets, dependent: :destroy
 

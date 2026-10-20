@@ -13,6 +13,8 @@ require 'administrate'
 require 'pundit'
 require 'sidekiq'
 require 'sidekiq/api'
+require 'shrine'
+require 'shrine/storage/memory'
 require 'administrate/mcp'
 
 module Dummy

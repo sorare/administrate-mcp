@@ -21,6 +21,7 @@ permissions the admin UI enforces.
 - [Configuration](#configuration)
 - [Routes](#routes)
 - [Dashboard declarations](#dashboard-declarations)
+- [Presigned uploads](#presigned-uploads)
 - [Authentication](#authentication)
 - [OAuth](#oauth)
 - [Improving the server from its own use](#improving-the-server-from-its-own-use)
@@ -48,6 +49,10 @@ about your application; everything host-specific goes through `Administrate::MCP
   the `write` scope (an API key with write access, or an OAuth token granted it) and the resource's
   own authorization predicate: on the loaded record for a member action, or on the model class for a
   collection action (`on: :collection`), such as a create, that takes no `id`.
+- Presigned uploads, opt-in: `uploads_prepare` hands out presigned `PUT` URLs, and an action declared
+  with `uploads: true` takes an `<attribute>_upload_id` for each attachment attribute. The file's
+  owner, expiry, real content type and real size are checked before the action runs. See
+  [Presigned uploads](docs/uploads.md).
 - Three ways to authenticate a caller: API keys stored as a digest, an external identity provider
   through `identity_fallback` (a Cloudflare Access verifier ships with the gem), and an optional
   built-in OAuth 2.1 server with Dynamic Client Registration, PKCE and refresh tokens, on by default
@@ -159,8 +164,8 @@ bin/rails db:migrate
 ```
 
 The tables are `administrate_mcp_api_keys`, `administrate_mcp_feedbacks`,
-`administrate_mcp_oauth_applications`, `administrate_mcp_oauth_access_grants` and
-`administrate_mcp_oauth_access_tokens`. They use uuid primary keys and a uuid column, `admin_id` by
+`administrate_mcp_oauth_applications`, `administrate_mcp_oauth_access_grants`,
+`administrate_mcp_oauth_access_tokens` and `administrate_mcp_upload_batches`. They use uuid primary keys and a uuid column, `admin_id` by
 default, that is indexed but carries no foreign key constraint, so the engine works with any admin
 table. Set `config.admin_foreign_key` before running the migrations if the host's own admin table
 already uses a different column name and renaming it is not an option, for example a live
@@ -168,6 +173,7 @@ credentials table.
 
 `administrate_mcp_feedbacks` is only needed when `config.persist_feedback` is `true`; leave it
 `false`, the default, and the migration ships but the table is never read from or written to.
+Likewise, `administrate_mcp_upload_batches` is only used once `config.uploads.enabled` is `true`.
 
 ## Quick start
 
@@ -220,6 +226,11 @@ helper adds: [docs/routes.md](docs/routes.md).
 `MCP_DESCRIPTION`, `MCP_BASE_SCOPE`, `MCP_SKIPPED_ATTRIBUTES`, `MCP_EXPOSED`, `COLLECTION_FILTERS`
 and `mcp_action`, the constants and macro that turn one dashboard into an MCP resource with its own
 readable fields and writable actions: [docs/dashboards.md](docs/dashboards.md).
+
+## Presigned uploads
+
+How a client uploads a file to a presigned URL and sets it on an attachment through an action, the
+checks on the uploaded file, and the storage it goes to: [docs/uploads.md](docs/uploads.md).
 
 ## Authentication
 

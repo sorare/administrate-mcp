@@ -12,6 +12,10 @@ module Administrate
     # An action is a member action by default: it takes an `id` and runs against the loaded record.
     # Declared with `on: :collection`, it takes no `id`, loads nothing and runs against the model.
     #
+    # An action declared with `uploads: true` (or a list of attributes) also takes an optional
+    # `<attribute>_upload_id` for each attachment attribute of the dashboard. The id is resolved
+    # into the attachment value before the block runs, so the block sees `params[:<attribute>]`.
+    #
     # Enforcement is layered: the generated tool requires an OAuth `write` scope (the rollout gate)
     # AND runs the resource's authorization predicate against the loaded record, or against a new
     # instance of the model for a collection action, as Administrate does for `new` and `create`.
@@ -28,6 +32,7 @@ module Administrate
           :description,
           :params,
           :required,
+          :uploads,
           :invoke,
           keyword_init: true
         )
@@ -40,7 +45,7 @@ module Administrate
         # Normalizes the arguments of a `mcp_action` declaration into a spec (everything but the
         # model, which is inferred from the owning dashboard when definitions are built).
         def build_spec(name, description:, on: :member, params: {}, predicate: nil, pundit: nil, scope: :write,
-                       destructive: true, &invoke)
+                       destructive: true, uploads: false, &invoke)
           raise ArgumentError, "#{name}: a block is required to invoke the action" unless invoke
           raise ArgumentError, "#{name}: on: must be :member or :collection" unless TARGETS.include?(on)
 
@@ -56,8 +61,16 @@ module Administrate
             description:,
             params: normalized.transform_values { |spec| spec.except(:required) },
             required: normalized.reject { |_, spec| spec[:required] == false }.keys,
+            uploads: normalize_uploads(uploads),
             invoke:
           }
+        end
+
+        def normalize_uploads(uploads)
+          return true if uploads == true
+          return [] unless uploads
+
+          Array(uploads).map(&:to_sym)
         end
 
         def normalize_params(params)
@@ -70,7 +83,8 @@ module Administrate
               next [] unless entry.dashboard_class.respond_to?(:mcp_action_specs)
 
               entry.dashboard_class.mcp_action_specs.map do |spec|
-                Definition.new(model_class: entry.model_class, **spec)
+                uploads = Uploads.action_attributes(entry.dashboard_class, spec[:name], spec[:uploads])
+                Definition.new(model_class: entry.model_class, **spec, uploads:)
               end
             end
         end
@@ -148,7 +162,7 @@ module Administrate
           private
 
           def schema_for(defn, resource)
-            properties = defn.params.dup
+            properties = defn.params.merge(Uploads.param_schemas(defn.uploads))
             required = defn.required.map(&:to_s)
             if defn.on == :member
               properties = { id: { type: 'string', description: "ID or slug of the #{resource}" }, **properties }
@@ -174,7 +188,8 @@ module Administrate
           end
 
           def invoke(defn, admin, id, params)
-            arguments = { admin:, params: params.slice(*defn.params.keys) }
+            declared = params.slice(*defn.params.keys, *Uploads.param_schemas(defn.uploads).keys)
+            arguments = { admin:, params: Uploads.resolve_params(defn.uploads, admin, declared) }
             arguments[:record] = Actions.find_record!(defn.model_class, id) if defn.on == :member
             result = defn.invoke.call(**arguments)
             return { error: failure_message(defn, result) } if failed?(result)
