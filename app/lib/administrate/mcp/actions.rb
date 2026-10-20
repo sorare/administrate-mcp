@@ -27,8 +27,7 @@ module Administrate
           keyword_init: true
         )
 
-      # Keywords the generated tool and the action block already use; a declared param can't take them.
-      RESERVED_PARAMS = %i[admin record params id].freeze
+      RESERVED_PARAMS = %i[admin id].freeze
 
       class << self
         # Normalizes the arguments of a `mcp_action` declaration into a spec (everything but the

@@ -42,11 +42,17 @@ RSpec.describe Administrate::MCP::Actions do
       expect { described_class.build_spec(:comment, description: 'Comment') }.to raise_error(ArgumentError)
     end
 
-    %w[admin record params id].each do |reserved|
+    %w[admin id].each do |reserved|
       it "refuses a param named #{reserved}" do
         expect { described_class.build_spec(:comment, description: 'Comment', params: { reserved => 'Taken' }) { nil } }
           .to raise_error(ArgumentError, /reserved param name\(s\): #{reserved}/)
       end
+    end
+
+    it 'accepts params named like the block keywords they are nested under' do
+      spec = described_class.build_spec(:comment, description: 'Comment', params: { record: 'R', params: 'P' }) { nil }
+
+      expect(spec[:params].keys).to eq(%i[record params])
     end
   end
 

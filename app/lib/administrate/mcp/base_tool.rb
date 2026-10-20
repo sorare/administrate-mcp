@@ -8,10 +8,14 @@ module Administrate
       ResourceForbiddenError = Administrate::MCP::ResourceForbiddenError
       InvalidArgumentError = Administrate::MCP::InvalidArgumentError
 
-      # Keywords the server supplies to `execute` itself; a client argument by these names is refused.
       RESERVED_ARGUMENTS = %i[admin].freeze
 
       class << self
+        def input_schema(value = NOT_SET)
+          reject_reserved_properties!(value) if value.is_a?(Hash)
+          super
+        end
+
         def requires_roles(*roles)
           @required_roles = roles.flatten
         end
@@ -46,20 +50,25 @@ module Administrate
         end
 
         def call_with_context(server_context, **args)
-          reject_reserved_arguments!(args)
           admin = server_context[:admin]
           check_scopes!(server_context)
           check_roles!(admin, **args)
           audit!(admin, args, server_context)
-          # The authenticated admin comes last so that no argument can ever replace it.
+          reject_reserved_arguments!(args)
           execute(**args, admin:)
         end
 
         def reject_reserved_arguments!(args)
-          reserved = RESERVED_ARGUMENTS & args.keys.map(&:to_sym)
+          reserved = args.keys & RESERVED_ARGUMENTS
           return if reserved.empty?
 
           raise InvalidArgumentError, "Reserved argument(s) cannot be passed: #{reserved.join(', ')}"
+        end
+
+        def reject_reserved_properties!(schema)
+          properties = (schema[:properties] || schema['properties'] || {}).keys.map(&:to_sym)
+          reserved = properties & RESERVED_ARGUMENTS
+          raise ArgumentError, "#{name}: reserved input property name(s): #{reserved.join(', ')}" if reserved.any?
         end
 
         def check_scopes!(server_context)

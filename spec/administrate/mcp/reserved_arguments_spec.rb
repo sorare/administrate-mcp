@@ -23,13 +23,13 @@ RSpec.describe 'Reserved tool arguments' do
       expect(tool).not_to have_received(:execute)
     end
 
-    it 'leaves the audit hook untouched' do
+    it 'audits the refused call under the authenticated admin' do
       seen = []
       Administrate::MCP.config.on_tool_call = ->(**args) { seen << args }
 
       call_tool('admin_resource_list_resources', { admin: 'forged' })
 
-      expect(seen).to be_empty
+      expect(seen).to contain_exactly(include(admin:, arguments: { admin: 'forged' }))
     end
 
     it 'still runs a call without the reserved argument' do
@@ -39,6 +39,35 @@ RSpec.describe 'Reserved tool arguments' do
 
       expect(response.dig(:result, :isError)).to be_falsey
       expect(tool).to have_received(:execute).with(admin:)
+    end
+  end
+
+  context 'with a host-defined tool' do
+    let(:tool) do
+      Class.new(Administrate::MCP::BaseTool) do
+        tool_name 'host_echo'
+        description 'Echoes the caller'
+        input_schema(properties: { msg: { type: 'string' } })
+
+        def self.execute(admin:, msg: nil)
+          text_response("#{admin.id} #{msg}")
+        end
+      end
+    end
+    let(:server) { MCP::Server.new(name: 'host', tools: [tool], server_context: { admin: }) }
+
+    it 'refuses a forged admin before execute runs' do
+      allow(tool).to receive(:execute).and_call_original
+
+      response = call_tool('host_echo', { msg: 'hi', admin: 'forged' })
+
+      expect(response.dig(:result, :isError)).to be(true)
+      expect(tool).not_to have_received(:execute)
+    end
+
+    it 'refuses to declare a reserved input property' do
+      expect { Class.new(Administrate::MCP::BaseTool) { input_schema(properties: { admin: { type: 'string' } }) } }
+        .to raise_error(ArgumentError, /reserved input property name\(s\): admin/)
     end
   end
 
