@@ -35,6 +35,17 @@ minor release may change behaviour a host depends on; the entry says so when it 
   storage is the Shrine `:cache` storage, replaceable through `config.uploads.storage`; the gem
   gains no dependency. Hosts that enable uploads need the new migration
   (`bin/rails administrate_mcp:install:migrations`).
+- An Active Storage storage for presigned uploads, `Administrate::MCP::Uploads::ActiveStorageStorage`,
+  on direct uploads. Preparing a file creates a blob with its declared size and checksum and returns
+  a `PUT` signed for both, so the service refuses any other size or content; resolving copies the
+  object, reads the copy's content type from its content, and hands the action the copy's signed
+  blob id, which an attachment accepts. A copy that fails a check or loses a concurrent resolve, and
+  a source above the maximum size, are purged. It is the default storage when Active Storage is loaded and
+  Shrine is not; the gem gains no dependency. Register the dashboard's Active Storage field with
+  `register_field(..., as: :attachment)`. `files` in `uploads_prepare` now also takes
+  `{ size:, checksum: }` per file, the checksum being the base64-encoded MD5 digest, and a storage
+  answering `checksum_required?` with `true` refuses a file without one. A custom storage's
+  `presign` also receives `filename:`, `size:` and `checksum:`.
 
 ### Changed
 

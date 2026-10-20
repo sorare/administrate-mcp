@@ -49,8 +49,9 @@ about your application; everything host-specific goes through `Administrate::MCP
   the `write` scope (an API key with write access, or an OAuth token granted it) and the resource's
   own authorization predicate: on the loaded record for a member action, or on the model class for a
   collection action (`on: :collection`), such as a create, that takes no `id`.
-- Presigned uploads for Shrine attachments, opt-in: `uploads_prepare` hands out presigned `POST`
-  URLs for one action and attribute, and an action declared with `uploads:` takes an
+- Presigned uploads for Shrine and Active Storage attachments, opt-in: `uploads_prepare` hands out
+  presigned upload URLs for one action and attribute (a `POST` bounded in size on Shrine, a direct
+  upload signed for the exact size and checksum on Active Storage), and an action declared with `uploads:` takes an
   `<attribute>_upload_id` for each attachment attribute. The file's owner, target, expiry, real size
   and real content type are checked on a copy the client cannot overwrite before the action runs.
   See [Presigned uploads](docs/uploads.md).

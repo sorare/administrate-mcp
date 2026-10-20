@@ -56,6 +56,19 @@ RSpec.describe Administrate::MCP::Uploads do
         .to raise_error(Administrate::MCP::InvalidArgumentError, /logo\.png size must be between 1 and 10485760 bytes/)
     end
 
+    it 'accepts a size and checksum per file and records the checksum' do
+      checksum = Digest::MD5.base64digest('logo')
+      upload_id = prepare_upload({ 'logo.png' => { 'size' => 1024, 'checksum' => checksum } })['logo.png'][:upload_id]
+
+      expect(entry_for(upload_id)).to include('size' => 1024, 'checksum' => checksum)
+    end
+
+    it 'refuses a checksum that is not a base64-encoded MD5 digest' do
+      expect { prepare_upload({ 'logo.png' => { size: 1024, checksum: Base64.strict_encode64('short') } }) }
+        .to raise_error(Administrate::MCP::InvalidArgumentError, /logo\.png checksum must be the base64-encoded MD5/)
+      expect(Administrate::MCP::UploadBatch.count).to eq(0)
+    end
+
     it 'refuses more files than max_files' do
       Administrate::MCP.config.uploads.max_files = 2
 

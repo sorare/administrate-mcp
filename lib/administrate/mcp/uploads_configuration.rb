@@ -39,12 +39,22 @@ module Administrate
       end
 
       def storage
-        @storage || (Uploads::ShrineStorage.new if defined?(::Shrine))
+        @storage || default_storage
       end
 
       def rules(content_types: nil, max_size: nil)
         Rules.new(content_types: (content_types || allowed_content_types).transform_keys(&:to_s),
                   max_size: max_size || self.max_size)
+      end
+
+      private
+
+      def default_storage
+        if defined?(::Shrine)
+          Uploads::ShrineStorage.new
+        elsif defined?(::ActiveStorage::Blob)
+          Uploads::ActiveStorageStorage.new
+        end
       end
     end
   end

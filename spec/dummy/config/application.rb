@@ -6,6 +6,7 @@ require 'rails'
 require 'active_record/railtie'
 require 'action_controller/railtie'
 require 'action_view/railtie'
+require 'active_storage/engine'
 require 'sprockets/railtie'
 
 require 'kaminari'
@@ -26,6 +27,7 @@ module Dummy
     config.action_dispatch.show_exceptions = :none
     config.secret_key_base = 'dummy-secret-key-base-for-specs-only'
     config.cache_store = :memory_store
+    config.active_storage.service = :test
     config.hosts.clear
     config.logger = Logger.new(File.expand_path('../log/test.log', __dir__))
   end

@@ -43,6 +43,14 @@ RSpec.describe Administrate::MCP::Tools::UploadsPrepare do
       expect(body['logo.png']['fields']).to include('Content-Type' => 'image/png')
     end
 
+    it 'accepts a file as a size and checksum' do
+      files = { 'logo.png': { size: 1024, checksum: Digest::MD5.base64digest('logo') } }
+      result = described_class.call(**arguments, files:, server_context: { admin:, scopes: ['write'] })
+
+      expect(result.error?).to be(false)
+      expect(JSON.parse(result.content.first[:text])['logo.png']).to include('method' => 'POST')
+    end
+
     it 'requires the write scope' do
       result = described_class.call(**arguments, server_context: { admin:, scopes: [] })
 

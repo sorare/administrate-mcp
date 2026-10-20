@@ -25,7 +25,7 @@ module Administrate
           "Shrine storage :#{@storage_key} (#{storage.class.name})"
         end
 
-        def presign(key, content_type:, max_size:, expires_in:)
+        def presign(key, content_type:, max_size:, expires_in:, **)
           presigned = storage.presign(key, method: :post, content_type:, content_length_range: 1..max_size,
                                            signature_expiration: expires_in.seconds.from_now)
           { method: 'POST', url: presigned[:url], fields: presigned[:fields] }
