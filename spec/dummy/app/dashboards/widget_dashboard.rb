@@ -30,6 +30,15 @@ class WidgetDashboard < Administrate::BaseDashboard
   FORM_ATTRIBUTES = %i[name status price featured].freeze
   COLLECTION_FILTERS_ORDER = [].freeze
 
+  mcp_action :create_draft,
+             on: :collection,
+             predicate: :create?,
+             destructive: false,
+             description: 'Create a draft widget.',
+             params: { name: 'The name of the new widget.' } do |admin:, params:|
+    Widget.create!(name: params[:name], admin:, status: :draft)
+  end
+
   def display_resource(widget)
     widget.name
   end

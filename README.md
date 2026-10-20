@@ -45,7 +45,9 @@ about your application; everything host-specific goes through `Administrate::MCP
 - Three generic tools built from every Administrate dashboard: `admin_resource_list_resources`,
   `admin_resource_list`, `admin_resource_show`.
 - Write actions declared per dashboard with `mcp_action`, each published as its own tool, gated by
-  the `write` scope (an API key with write access, or an OAuth token granted it) and the resource's own authorization predicate on the loaded record.
+  the `write` scope (an API key with write access, or an OAuth token granted it) and the resource's
+  own authorization predicate: on the loaded record for a member action, or on the model class for a
+  collection action (`on: :collection`), such as a create, that takes no `id`.
 - Three ways to authenticate a caller: API keys stored as a digest, an external identity provider
   through `identity_fallback` (a Cloudflare Access verifier ships with the gem), and an optional
   built-in OAuth 2.1 server with Dynamic Client Registration, PKCE and refresh tokens, on by default
