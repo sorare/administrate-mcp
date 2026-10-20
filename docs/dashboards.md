@@ -20,9 +20,10 @@ class OrderDashboard < Administrate::BaseDashboard
 
   mcp_action :import,
              on: :collection,
+             destructive: false,
              description: 'Import an order from a marketplace.',
              params: { reference: 'The marketplace order reference.' } do |admin:, params:|
-    Orders::Import.call!(reference: params[:reference], admin:)
+    Orders::Import.call!(reference: params[:reference], admin:).order
   end
 end
 ```
@@ -41,17 +42,30 @@ base class, is not applied to every resource. A subclass that wants one declares
 - `COLLECTION_FILTERS` are published as filters; a one-argument lambda is a boolean filter, a
   two-argument one takes a value. Foreign key columns are filterable without being declared.
 - `mcp_action` publishes one tool per declaration, named `<resource>_<action>` (`order_refund`). It
-  requires the OAuth `write` scope, and the authorization predicate (`refund?` by default, or
-  `predicate:`, also spelled `pundit:`), checked through `config.authorization`. Every call is
-  reported to `config.on_tool_call`, and a result answering `success? == false` is reported as an
-  error, with the result's `error` as the message when it has one.
+  requires the OAuth `write` scope, and the authorization predicate (`refund?` for `:refund` by
+  default, or `predicate:`, also spelled `pundit:`), checked through `config.authorization`. Every
+  call is reported to `config.on_tool_call`.
+  - The input schema lists `params` and closes the object (`additionalProperties: false`), so an
+    argument that is not declared is refused before the action runs, and the block only ever sees
+    declared params.
+  - The block's result decides the answer. A result answering `success? == false` is an error, with
+    the result's `error` as the message when it has one. An Active Record object that is not
+    persisted or has errors is an error too, with its validation messages. Anything else is a
+    success.
+  - The tool is announced as destructive unless the declaration says `destructive: false`. Clients
+    may ask for confirmation before running a destructive tool, so set it on actions that only add
+    or prepare something.
   - A member action (`on: :member`, the default) takes an `id` (or slug), loads the record and checks
-    the predicate against it. The block receives `record:`, `admin:` and `params:`.
+    the predicate against it. The block receives `record:`, `admin:` and `params:`. The response
+    echoes the `id` the caller passed.
   - A collection action (`on: :collection`) takes no `id` and loads nothing, so it suits creating a
-    record or preparing something that is not a record yet. The predicate, `create?` by default, is
-    checked against the model class, both when the tool list is built and on every call. The block
-    receives `admin:` and `params:`. When it returns an Active Record object, the response carries
-    that record's `id`, so the client can act on what it just created.
+    record or preparing something that is not a record yet. The predicate is checked against a new
+    instance of the model, as Administrate does for `new` and `create`, both when the tool list is
+    built and on every call; a creating action usually declares `predicate: :create?`. The block
+    receives `admin:` and `params:`, and owns any scoping of what it creates, such as a tenant,
+    since no record lookup does it. The response carries the primary key of the record the block
+    returns, so return the created record for the client to act on it; a block that returns
+    something else gets a response without `id`.
 
 ## Search
 

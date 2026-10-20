@@ -13,10 +13,10 @@ RSpec.describe Administrate::MCP::Actions do
       expect(spec).to include(name: :approve, on: :member, predicate: :approve?, scope: :write, destructive: true)
     end
 
-    it 'defaults the predicate of a collection action to create?' do
+    it 'defaults the predicate of a collection action to the action name too' do
       spec = described_class.build_spec(:import, on: :collection, description: 'Import some') { nil }
 
-      expect(spec).to include(on: :collection, predicate: :create?)
+      expect(spec).to include(on: :collection, predicate: :import?)
     end
 
     it 'keeps an explicit predicate on a collection action' do
@@ -124,12 +124,17 @@ RSpec.describe Administrate::MCP::Actions do
         names = described_class.tools_for({ admin:, scopes: ['write'] }).map(&:name_value)
 
         expect(names).to eq(['gadget_relabel'])
-        expect(checks).to include([Widget, :create?])
+        expect(checks).to include([an_instance_of(Widget), :create?])
       end
     end
   end
 
   describe 'the generated tool' do
+    def build_member_tool(&block)
+      spec = described_class.build_spec(:fix, description: 'Fix a gadget', &block)
+      described_class::ToolFactory.build(described_class::Definition.new(model_class: Gadget, **spec))
+    end
+
     subject(:tool) { described_class.all_tools.find { |t| t.name_value == 'gadget_relabel' } }
 
     it 'requires an id plus the declared params' do
@@ -145,6 +150,23 @@ RSpec.describe Administrate::MCP::Actions do
 
       expect(JSON.parse(result.content.first[:text])).to include('status' => 'ok', 'action' => 'relabel')
       expect(gadget.reload.label).to eq('Renamed')
+    end
+
+    it 'echoes the id the caller passed, slug or primary key' do
+      result = tool.call(id: gadget.id, label: 'Renamed', server_context: { admin:, scopes: ['write'] })
+
+      expect(JSON.parse(result.content.first[:text])).to include('id' => gadget.id)
+    end
+
+    it 'reports a record returned with errors as an error' do
+      relabel = build_member_tool { |record:, **| record.tap { record.errors.add(:label, :blank) } }
+      result = relabel.call(id: gadget.id, server_context: { admin:, scopes: ['write'] })
+
+      expect(result.content.first[:text]).to eq("Label can't be blank")
+    end
+
+    it 'closes the schema to undeclared arguments' do
+      expect(tool.input_schema.to_h).to include(additionalProperties: false)
     end
 
     it 'reports an unknown record as an authorization error' do
@@ -192,6 +214,44 @@ RSpec.describe Administrate::MCP::Actions do
       expect(JSON.parse(result.content.first[:text])).to eq('status' => 'ok', 'model' => 'widget', 'action' => 'import')
     end
 
+    it 'reports a record that was not saved as an error with its validation messages' do
+      invalid = Widget.new.tap { |widget| widget.errors.add(:name, :blank) }
+      result = build_tool { |**| invalid }.call(server_context: ctx)
+
+      expect(result.error?).to be(true)
+      expect(result.content.first[:text]).to eq("Name can't be blank")
+    end
+
+    it 'reports a record returned unsaved and without errors as a failure of the action' do
+      result = build_tool { |**| Widget.new(name: 'Never saved') }.call(server_context: ctx)
+
+      expect(result.content.first[:text]).to eq('import failed')
+    end
+
+    it 'closes the schema to undeclared arguments' do
+      expect(tool.input_schema.to_h).to include(additionalProperties: false)
+    end
+
+    it 'has undeclared arguments refused by the server before the action runs' do
+      server = Administrate::MCP::ServerBuilder.build(server_context: ctx.dup)
+      response = server.handle(
+        { jsonrpc: '2.0', id: 1, method: 'tools/call',
+          params: { name: 'widget_create_draft', arguments: { name: 'Fresh', status: 'published' } } }
+      )
+
+      expect(response.dig(:result, :isError)).to be(true)
+      expect(response.dig(:result, :content, 0, :text)).to include('Invalid arguments')
+      expect(Widget.unscoped.where(name: 'Fresh')).not_to exist
+    end
+
+    it 'passes only the declared params to the block' do
+      seen = nil
+      build_tool(params: { name: 'Name' }) { |params:, **| seen = params }
+        .call(name: 'Fresh', status: 'published', server_context: ctx)
+
+      expect(seen).to eq(name: 'Fresh')
+    end
+
     it 'reports a result answering success? == false as an error' do
       failure = Struct.new(:error) { def success? = false }.new('Name already taken')
       result = build_tool { |**| failure }.call(server_context: ctx)
@@ -221,7 +281,7 @@ RSpec.describe Administrate::MCP::Actions do
     context 'with an authorization adapter that refuses create? on the model class' do
       before do
         Administrate::MCP.config.authorization = Class.new(Administrate::MCP::Authorization::Base) do
-          def authorized?(_admin, record_or_class, action) = !(record_or_class == Widget && action == :create?)
+          def authorized?(_admin, record_or_class, action) = !(record_or_class.is_a?(Widget) && action == :create?)
         end.new
       end
 
@@ -248,12 +308,12 @@ RSpec.describe Administrate::MCP::Actions do
           'WidgetPolicy',
           Class.new do
             define_method(:initialize) { |_admin, record| @record = record }
-            define_method(:create?) { create_allowed && @record == Widget }
+            define_method(:create?) { create_allowed && @record.new_record? && @record.status == 'draft' }
           end
         )
       end
 
-      it 'publishes the tool and runs it when the policy allows create? on the class' do
+      it 'publishes the tool and runs it when the policy allows create? on a new record' do
         names = described_class.tools_for(ctx).map(&:name_value)
         result = tool.call(name: 'Fresh', server_context: ctx)
 
@@ -277,7 +337,7 @@ RSpec.describe Administrate::MCP::Actions do
     end
 
     context 'with a custom predicate' do
-      it 'checks that predicate against the model class' do
+      it 'checks that predicate against a new instance of the model' do
         checks = []
         Administrate::MCP.config.authorization = Class.new(Administrate::MCP::Authorization::Base) do
           define_method(:authorized?) { |_admin, record_or_class, action| checks << [record_or_class, action] }
@@ -285,7 +345,7 @@ RSpec.describe Administrate::MCP::Actions do
 
         build_tool(predicate: :import?) { |**| true }.call(server_context: ctx)
 
-        expect(checks).to eq([[Widget, :import?]])
+        expect(checks).to contain_exactly([an_instance_of(Widget), :import?])
       end
     end
   end

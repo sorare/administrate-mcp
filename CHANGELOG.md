@@ -12,12 +12,18 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 - Collection-level write actions: `mcp_action name, on: :collection, ...` publishes a tool with no
   `id` in its input schema. Nothing is loaded; the block receives `admin:` and `params:`, and the
-  authorization predicate, `create?` by default and overridable with `predicate:` or `pundit:`, is
-  checked against the model class through `config.authorization`, when the tool list is built and
-  on every call. The `write` scope gate, the `on_tool_call` audit and the `success? == false` error
-  reporting work as for member actions, and the tool keeps the `<resource>_<action>` name. When the
-  block returns an Active Record object, the response includes its `id`. `on: :member` stays the
-  default, so existing declarations are unchanged.
+  authorization predicate, `<name>?` by default as for member actions and overridable with
+  `predicate:` or `pundit:`, is checked against a new instance of the model through
+  `config.authorization`, when the tool list is built and on every call. The `write` scope gate,
+  the `on_tool_call` audit and the error reporting work as for member actions, and the tool keeps
+  the `<resource>_<action>` name. When the block returns an Active Record object, the response
+  includes its primary key as `id`. `on: :member` stays the default.
+
+### Changed
+
+- **Behaviour change for hosts:** an `mcp_action` block that returns an Active Record object that is
+  not persisted or has errors is now reported as an error, with the record's validation messages,
+  instead of `status: ok`.
 
 ## [0.3.1] - 2026-10-20
 

@@ -32,6 +32,8 @@ class WidgetDashboard < Administrate::BaseDashboard
 
   mcp_action :create_draft,
              on: :collection,
+             predicate: :create?,
+             destructive: false,
              description: 'Create a draft widget.',
              params: { name: 'The name of the new widget.' } do |admin:, params:|
     Widget.create!(name: params[:name], admin:, status: :draft)

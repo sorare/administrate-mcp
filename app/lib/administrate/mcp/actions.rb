@@ -13,9 +13,9 @@ module Administrate
     # Declared with `on: :collection`, it takes no `id`, loads nothing and runs against the model.
     #
     # Enforcement is layered: the generated tool requires an OAuth `write` scope (the rollout gate)
-    # AND runs the resource's authorization predicate against the loaded record, or the model class
-    # for a collection action (the per-admin truth, identical to the admin UI). Auditing is
-    # inherited from BaseTool.
+    # AND runs the resource's authorization predicate against the loaded record, or against a new
+    # instance of the model for a collection action, as Administrate does for `new` and `create`.
+    # Auditing is inherited from BaseTool.
     module Actions
       Definition =
         Struct.new(
@@ -50,7 +50,7 @@ module Administrate
           {
             name: name.to_sym,
             on:,
-            predicate: (predicate || pundit || default_predicate(name, on)).to_sym,
+            predicate: (predicate || pundit || :"#{name}?").to_sym,
             scope: scope.to_sym,
             destructive:,
             description:,
@@ -114,12 +114,9 @@ module Administrate
           raise ArgumentError, "#{name}: reserved param name(s): #{reserved.join(', ')}" if reserved.any?
         end
 
-        def default_predicate(name, on)
-          on == :collection ? :create? : :"#{name}?"
-        end
-
         def authorized_for_discovery?(admin, definition)
-          Administrate::MCP.config.authorization.authorized?(admin, definition.model_class, definition.predicate)
+          target = definition.on == :collection ? definition.model_class.new : definition.model_class
+          Administrate::MCP.config.authorization.authorized?(admin, target, definition.predicate)
         rescue StandardError
           false
         end
@@ -148,69 +145,57 @@ module Administrate
             klass
           end
 
-          def schema_for(defn, resource)
-            required = defn.required.map(&:to_s)
-            return { properties: defn.params.dup, required:, additionalProperties: false } if defn.on == :collection
-
-            properties = { id: { type: 'string', description: "ID or slug of the #{resource}" } }
-            defn.params.each { |name, spec| properties[name] = spec }
-            { properties:, required: %w[id] + required, additionalProperties: false }
-          end
-
-          # Replaces the role-based default with instance-level authorization on the loaded record.
-          def authorize!(defn, admin, id)
-            record = Actions.find_record!(defn.model_class, id)
-            Actions.authorize!(admin, record, defn.predicate)
-          end
-
-          def invoke(defn, admin, id, params)
-            record = Actions.find_record!(defn.model_class, id)
-            result = defn.invoke.call(record:, admin:, params:)
-            return failure(defn, result) if failed?(result)
-
-            { data: { status: 'ok', model: defn.model_class.name.underscore, id:, action: defn.name.to_s } }
-          end
-
-          def invoke_collection(defn, admin, params)
-            result = defn.invoke.call(admin:, params:)
-            return failure(defn, result) if failed?(result)
-
-            data = { status: 'ok', model: defn.model_class.name.underscore, action: defn.name.to_s }
-            data[:id] = result.id if result.is_a?(ActiveRecord::Base)
-            { data: }
-          end
-
           private
+
+          def schema_for(defn, resource)
+            properties = defn.params.dup
+            required = defn.required.map(&:to_s)
+            if defn.on == :member
+              properties = { id: { type: 'string', description: "ID or slug of the #{resource}" }, **properties }
+              required = %w[id] + required
+            end
+            { properties:, required:, additionalProperties: false }
+          end
 
           def define_behaviors(klass, defn)
             klass.define_singleton_method(:definition) { defn }
-            return define_collection_behaviors(klass, defn) if defn.on == :collection
-
             klass.define_singleton_method(:check_roles!) do |admin, id: nil, **|
-              ToolFactory.authorize!(defn, admin, id)
+              ToolFactory.send(:authorize!, defn, admin, id)
             end
-            klass.define_singleton_method(:execute) do |admin:, id:, **params|
-              outcome = ToolFactory.invoke(defn, admin, id, params)
+            klass.define_singleton_method(:execute) do |admin:, id: nil, **params|
+              outcome = ToolFactory.send(:invoke, defn, admin, id, params)
               outcome.key?(:error) ? error_response(outcome[:error]) : json_response(outcome[:data])
             end
           end
 
-          def define_collection_behaviors(klass, defn)
-            klass.define_singleton_method(:check_roles!) do |admin, **|
-              Actions.authorize!(admin, defn.model_class, defn.predicate)
-            end
-            klass.define_singleton_method(:execute) do |admin:, **params|
-              outcome = ToolFactory.invoke_collection(defn, admin, params)
-              outcome.key?(:error) ? error_response(outcome[:error]) : json_response(outcome[:data])
-            end
+          def authorize!(defn, admin, id)
+            target = defn.on == :member ? Actions.find_record!(defn.model_class, id) : defn.model_class.new
+            Actions.authorize!(admin, target, defn.predicate)
           end
 
-          def failure(defn, result)
-            { error: result.try(:error) || "#{defn.name} failed" }
+          def invoke(defn, admin, id, params)
+            arguments = { admin:, params: params.slice(*defn.params.keys) }
+            arguments[:record] = Actions.find_record!(defn.model_class, id) if defn.on == :member
+            result = defn.invoke.call(**arguments)
+            return { error: failure_message(defn, result) } if failed?(result)
+
+            { data: success_data(defn, id, result) }
+          end
+
+          def success_data(defn, id, result)
+            id = result.id if defn.on == :collection && result.is_a?(ActiveRecord::Base)
+            { status: 'ok', model: defn.model_class.name.underscore, id:, action: defn.name.to_s }.compact
           end
 
           def failed?(result)
+            return !result.persisted? || result.errors.any? if result.is_a?(ActiveRecord::Base)
+
             result.respond_to?(:success?) && !result.success?
+          end
+
+          def failure_message(defn, result)
+            message = result.is_a?(ActiveRecord::Base) ? result.errors.full_messages.to_sentence : result.try(:error)
+            message.presence || "#{defn.name} failed"
           end
         end
       end
