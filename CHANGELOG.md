@@ -8,13 +8,17 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-20
+
 ### Security
 
 - A `tools/call` argument named `admin` no longer replaces the authenticated admin passed to a
   tool's `execute` and to `mcp_action` blocks
   ([GHSA-vv7c-hhjc-fhq8](https://github.com/sorare/administrate-mcp/security/advisories/GHSA-vv7c-hhjc-fhq8)).
-  The call is now refused with a tool error after the scope and role checks, and the `on_tool_call`
-  hook still reports it under the authenticated admin, with the refused argument in `arguments`.
+  The call is now refused with a tool error. For built-in and host-defined tools, the refusal comes
+  after the scope and role checks, and the `on_tool_call` hook still reports the call under the
+  authenticated admin, with the refused argument in `arguments`. The tools generated from
+  `mcp_action` refuse it while validating arguments, before the hook runs.
 
 ### Changed
 
@@ -22,7 +26,8 @@ minor release may change behaviour a host depends on; the entry says so when it 
   `ArgumentError` when its class is loaded, and an `mcp_action` param named `admin` or `id` raises
   `ArgumentError` when the dashboard is loaded. Rename the property or param.
 - **Behaviour change for clients:** the tools generated from `mcp_action` declarations now reject
-  arguments they do not declare, with an `Invalid arguments` tool error, instead of passing them to the block in `params`.
+  arguments they do not declare, with an `Invalid arguments` tool error, instead of passing them to
+  the block in `params`.
 
 ## [0.3.0] - 2026-10-02
 
@@ -133,7 +138,8 @@ minor release may change behaviour a host depends on; the entry says so when it 
   took the gem from git before 0.1.0 must reinstall its migrations rather than migrate
   incrementally.
 
-[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/sorare/administrate-mcp/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sorare/administrate-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sorare/administrate-mcp/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sorare/administrate-mcp/releases/tag/v0.1.0
