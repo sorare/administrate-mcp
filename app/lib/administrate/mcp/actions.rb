@@ -68,7 +68,9 @@ module Administrate
         end
 
         def normalize_params(params)
-          params.transform_values { |spec| spec.is_a?(String) ? { type: 'string', description: spec } : spec }
+          params.to_h do |name, spec|
+            [name.to_sym, spec.is_a?(String) ? { type: 'string', description: spec } : spec]
+          end
         end
 
         def definitions
@@ -200,7 +202,7 @@ module Administrate
           end
 
           def failed?(result)
-            return !result.persisted? || result.errors.any? if result.is_a?(ActiveRecord::Base)
+            return result.new_record? || result.errors.any? if result.is_a?(ActiveRecord::Base)
 
             result.respond_to?(:success?) && !result.success?
           end

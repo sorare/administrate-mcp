@@ -36,6 +36,13 @@ RSpec.describe Administrate::MCP::Actions do
       expect(spec[:predicate]).to eq(:moderate?)
     end
 
+    it 'keys params by symbol whichever way they were declared' do
+      spec = described_class.build_spec(:comment, description: 'Comment', params: { 'body' => 'The body' }) { nil }
+
+      expect(spec[:params].keys).to eq([:body])
+      expect(spec[:required]).to eq([:body])
+    end
+
     it 'expands a String param into a string schema and marks it required' do
       spec = described_class.build_spec(:comment, description: 'Comment', params: { body: 'The body' }) { nil }
 
@@ -158,6 +165,14 @@ RSpec.describe Administrate::MCP::Actions do
       expect(JSON.parse(result.content.first[:text])).to include('id' => gadget.id)
     end
 
+    it 'reports a member action that returns the record it destroyed as a success' do
+      destroy = build_member_tool { |record:, **| record.destroy }
+      result = destroy.call(id: gadget.id, server_context: { admin:, scopes: ['write'] })
+
+      expect(JSON.parse(result.content.first[:text])).to include('status' => 'ok', 'id' => gadget.id)
+      expect(Gadget.where(id: gadget.id)).not_to exist
+    end
+
     it 'reports a record returned with errors as an error' do
       relabel = build_member_tool { |record:, **| record.tap { record.errors.add(:label, :blank) } }
       result = relabel.call(id: gadget.id, server_context: { admin:, scopes: ['write'] })
@@ -242,6 +257,14 @@ RSpec.describe Administrate::MCP::Actions do
       expect(response.dig(:result, :isError)).to be(true)
       expect(response.dig(:result, :content, 0, :text)).to include('Invalid arguments')
       expect(Widget.unscoped.where(name: 'Fresh')).not_to exist
+    end
+
+    it 'passes a param declared with a String key to the block' do
+      seen = nil
+      build_tool(params: { 'reference' => 'Reference' }) { |params:, **| seen = params }
+        .call(reference: 'R-1', server_context: ctx)
+
+      expect(seen).to eq(reference: 'R-1')
     end
 
     it 'passes only the declared params to the block' do
