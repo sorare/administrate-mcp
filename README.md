@@ -49,10 +49,11 @@ about your application; everything host-specific goes through `Administrate::MCP
   the `write` scope (an API key with write access, or an OAuth token granted it) and the resource's
   own authorization predicate: on the loaded record for a member action, or on the model class for a
   collection action (`on: :collection`), such as a create, that takes no `id`.
-- Presigned uploads, opt-in: `uploads_prepare` hands out presigned `PUT` URLs, and an action declared
-  with `uploads: true` takes an `<attribute>_upload_id` for each attachment attribute. The file's
-  owner, expiry, real content type and real size are checked before the action runs. See
-  [Presigned uploads](docs/uploads.md).
+- Presigned uploads for Shrine attachments, opt-in: `uploads_prepare` hands out presigned `POST`
+  URLs for one action and attribute, and an action declared with `uploads:` takes an
+  `<attribute>_upload_id` for each attachment attribute. The file's owner, target, expiry, real size
+  and real content type are checked on a copy the client cannot overwrite before the action runs.
+  See [Presigned uploads](docs/uploads.md).
 - Three ways to authenticate a caller: API keys stored as a digest, an external identity provider
   through `identity_fallback` (a Cloudflare Access verifier ships with the gem), and an optional
   built-in OAuth 2.1 server with Dynamic Client Registration, PKCE and refresh tokens, on by default

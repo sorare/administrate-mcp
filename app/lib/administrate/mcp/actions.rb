@@ -12,9 +12,10 @@ module Administrate
     # An action is a member action by default: it takes an `id` and runs against the loaded record.
     # Declared with `on: :collection`, it takes no `id`, loads nothing and runs against the model.
     #
-    # An action declared with `uploads: true` (or a list of attributes) also takes an optional
-    # `<attribute>_upload_id` for each attachment attribute of the dashboard. The id is resolved
-    # into the attachment value before the block runs, so the block sees `params[:<attribute>]`.
+    # An action declared with `uploads:` (true, a list of attachment attributes, or a hash of
+    # attribute to `content_types:` / `max_size:` overrides) also takes an optional
+    # `<attribute>_upload_id` for each of them. The id is resolved into the attachment value before
+    # the block runs, so the block sees `params[:<attribute>]`.
     #
     # Enforcement is layered: the generated tool requires an OAuth `write` scope (the rollout gate)
     # AND runs the resource's authorization predicate against the loaded record, or against a new
@@ -61,16 +62,9 @@ module Administrate
             description:,
             params: normalized.transform_values { |spec| spec.except(:required) },
             required: normalized.reject { |_, spec| spec[:required] == false }.keys,
-            uploads: normalize_uploads(uploads),
+            uploads: Uploads::Declarations.normalize(uploads),
             invoke:
           }
-        end
-
-        def normalize_uploads(uploads)
-          return true if uploads == true
-          return [] unless uploads
-
-          Array(uploads).map(&:to_sym)
         end
 
         def normalize_params(params)
@@ -83,10 +77,18 @@ module Administrate
               next [] unless entry.dashboard_class.respond_to?(:mcp_action_specs)
 
               entry.dashboard_class.mcp_action_specs.map do |spec|
-                uploads = Uploads.action_attributes(entry.dashboard_class, spec[:name], spec[:uploads])
+                uploads = Uploads::Declarations.action_attributes(entry.dashboard_class, spec[:name], spec[:uploads])
                 Definition.new(model_class: entry.model_class, **spec, uploads:)
               end
             end
+        end
+
+        def tool_name(definition)
+          "#{definition.model_class.name.underscore.tr('/', '_')}_#{definition.name}"
+        end
+
+        def available_to?(admin, definition)
+          authorized_for_discovery?(admin, definition)
         end
 
         def all_tools
@@ -150,7 +152,7 @@ module Administrate
           def build(defn)
             resource = defn.model_class.name.underscore
             klass = Class.new(BaseTool)
-            klass.tool_name "#{resource.tr('/', '_')}_#{defn.name}"
+            klass.tool_name Actions.tool_name(defn)
             klass.description defn.description
             klass.annotations(read_only_hint: false, destructive_hint: defn.destructive, open_world_hint: true)
             klass.requires_scope defn.scope
@@ -162,7 +164,7 @@ module Administrate
           private
 
           def schema_for(defn, resource)
-            properties = defn.params.merge(Uploads.param_schemas(defn.uploads))
+            properties = defn.params.merge(Uploads::Declarations.param_schemas(defn))
             required = defn.required.map(&:to_s)
             if defn.on == :member
               properties = { id: { type: 'string', description: "ID or slug of the #{resource}" }, **properties }
@@ -188,8 +190,8 @@ module Administrate
           end
 
           def invoke(defn, admin, id, params)
-            declared = params.slice(*defn.params.keys, *Uploads.param_schemas(defn.uploads).keys)
-            arguments = { admin:, params: Uploads.resolve_params(defn.uploads, admin, declared) }
+            declared = params.slice(*defn.params.keys, *Uploads::Declarations.param_schemas(defn).keys)
+            arguments = { admin:, params: Uploads::Declarations.resolve_params(defn, admin, declared) }
             arguments[:record] = Actions.find_record!(defn.model_class, id) if defn.on == :member
             result = defn.invoke.call(**arguments)
             return { error: failure_message(defn, result) } if failed?(result)

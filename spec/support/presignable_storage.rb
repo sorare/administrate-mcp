@@ -28,6 +28,11 @@ RSpec.shared_context 'with presignable storage' do
       body = objects[context.params[:key]]
       body ? { content_length: body.bytesize } : { status_code: 404, headers: {}, body: '' }
     })
+    client.stub_responses(:copy_object, lambda { |context|
+      source = CGI.unescape(context.params[:copy_source].delete_prefix("#{context.params[:bucket]}/"))
+      objects[context.params[:key]] = objects.fetch(source)
+      { copy_object_result: { etag: '"copied"' } }
+    })
     client.stub_responses(:get_object, lambda { |context|
       body = objects[context.params[:key]]
       body ? { body:, content_length: body.bytesize } : 'NoSuchKey'
@@ -44,5 +49,16 @@ RSpec.shared_context 'with presignable storage' do
 
   def put_object(key, body)
     stored_objects["cache/#{key}"] = body
+  end
+
+  def prepare_upload(files = { 'logo.png' => 1024 }, admin: self.admin, tool: 'widget_create_draft',
+                     attribute: 'picture')
+    Administrate::MCP::Uploads.prepare(admin:, tool:, attribute:, files:)
+  end
+
+  def upload_png(**)
+    upload_id = prepare_upload({ 'logo.png' => png.bytesize }, **)['logo.png'][:upload_id]
+    put_object("#{upload_id}.png", png)
+    upload_id
   end
 end

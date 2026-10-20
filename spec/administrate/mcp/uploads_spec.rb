@@ -4,66 +4,89 @@ RSpec.describe Administrate::MCP::Uploads do
   include_context 'with presignable storage'
 
   let(:admin) { create(:admin, :full_access) }
-
-  def prepare(files = { 'logo.png' => 1024 })
-    described_class.prepare(admin:, files:)
-  end
+  let(:rules) { Administrate::MCP.config.uploads.rules }
 
   def entry_for(upload_id)
     Administrate::MCP::UploadBatch.with_upload(upload_id).sole.file(upload_id)
   end
 
+  def post_policy(upload)
+    JSON.parse(Base64.decode64(upload[:fields]['policy']))
+  end
+
   describe '.prepare' do
-    it 'records the batch and hands out a presigned PUT per file' do
-      uploads = prepare('logo.png' => 1024, 'banner.JPG' => 2048)
+    it 'records the batch and hands out a presigned POST per file' do
+      uploads = prepare_upload({ 'logo.png' => 1024, 'banner.JPG' => 2048 })
 
       expect(uploads.keys).to eq(%w[logo.png banner.JPG])
-      expect(uploads['logo.png']).to include(headers: { 'Content-Type' => 'image/png' })
-      expect(uploads['logo.png'][:url]).to start_with('https://uploads-test.s3.eu-west-1.amazonaws.com/cache/')
-      expect(uploads['banner.JPG'][:headers]).to eq('Content-Type' => 'image/jpeg')
+      expect(uploads['logo.png']).to include(method: 'POST', url: 'https://uploads-test.s3.eu-west-1.amazonaws.com')
+      expect(uploads['logo.png'][:fields]).to include('key' => "cache/#{uploads['logo.png'][:upload_id]}.png",
+                                                      'Content-Type' => 'image/png')
+      expect(uploads['banner.JPG'][:fields]).to include('Content-Type' => 'image/jpeg')
 
       batch = Administrate::MCP::UploadBatch.sole
       expect(batch).to have_attributes(admin:)
       expect(batch.expires_at).to be_within(5.seconds).of(1.hour.from_now)
       expect(batch.file(uploads['logo.png'][:upload_id])).to include(
         'filename' => 'logo.png', 'content_type' => 'image/png', 'size' => 1024,
-        'key' => "#{uploads['logo.png'][:upload_id]}.png"
+        'tool' => 'widget_create_draft', 'attribute' => 'picture'
       )
     end
 
-    it 'signs the URL for 15 minutes by default' do
-      url = prepare['logo.png'][:url]
+    it 'bounds the content length in the POST policy, so the storage refuses a larger file' do
+      conditions = post_policy(prepare_upload['logo.png'])['conditions']
 
-      expect(Rack::Utils.parse_query(URI(url).query)).to include('X-Amz-Expires' => '900')
+      expect(conditions).to include(['content-length-range', 1, 10 * 1024 * 1024])
+    end
+
+    it 'signs the POST for 15 minutes by default' do
+      expiration = Time.zone.parse(post_policy(prepare_upload['logo.png'])['expiration'])
+
+      expect(expiration).to be_within(5.seconds).of(15.minutes.from_now)
     end
 
     it 'refuses a file type outside the allowed ones and records nothing' do
-      expect { prepare('notes.pdf' => 10, 'logo.png' => 10) }
+      expect { prepare_upload({ 'notes.pdf' => 10, 'logo.png' => 10 }) }
         .to raise_error(Administrate::MCP::InvalidArgumentError, /notes\.pdf is not an allowed file type/)
       expect(Administrate::MCP::UploadBatch.count).to eq(0)
     end
 
     it 'refuses a declared size above the maximum' do
-      expect { prepare('logo.png' => (10 * 1024 * 1024) + 1) }
+      expect { prepare_upload({ 'logo.png' => (10 * 1024 * 1024) + 1 }) }
         .to raise_error(Administrate::MCP::InvalidArgumentError, /logo\.png size must be between 1 and 10485760 bytes/)
     end
 
-    it 'honours the configured types and maximum size' do
-      Administrate::MCP.config.uploads.allowed_content_types = { '.pdf' => 'application/pdf' }
-      Administrate::MCP.config.uploads.max_size = 100
+    it 'refuses more files than max_files' do
+      Administrate::MCP.config.uploads.max_files = 2
 
-      expect(prepare('notes.pdf' => 100)['notes.pdf'][:headers]).to eq('Content-Type' => 'application/pdf')
-      expect { prepare('notes.pdf' => 101) }.to raise_error(Administrate::MCP::InvalidArgumentError)
+      expect { prepare_upload({ 'a.png' => 1, 'b.png' => 1, 'c.png' => 1 }) }
+        .to raise_error(Administrate::MCP::InvalidArgumentError, 'files can name at most 2 files')
     end
 
     it 'refuses an empty list' do
-      expect { prepare({}) }.to raise_error(Administrate::MCP::InvalidArgumentError, /at least one file/)
+      expect { prepare_upload({}) }.to raise_error(Administrate::MCP::InvalidArgumentError, /at least one file/)
+    end
+
+    it 'refuses an action that does not exist or accepts no upload for the attribute' do
+      expect { prepare_upload(tool: 'widget_nope') }
+        .to raise_error(Administrate::MCP::InvalidArgumentError, /No action widget_nope .* available to you/)
+      expect { prepare_upload(tool: 'gadget_relabel', attribute: 'label') }
+        .to raise_error(Administrate::MCP::InvalidArgumentError, /No action gadget_relabel/)
+    end
+
+    it 'refuses an action the admin is not authorized to use' do
+      Administrate::MCP.config.authorization = Class.new(Administrate::MCP::Authorization::Base) do
+        def authorized?(_admin, _record_or_class, action) = action != :create?
+      end.new
+
+      expect { prepare_upload }.to raise_error(Administrate::MCP::InvalidArgumentError, /available to you/)
+      expect(Administrate::MCP::UploadBatch.count).to eq(0)
     end
 
     it 'explains a storage that cannot presign' do
       Shrine.storages[:cache] = Shrine::Storage::Memory.new
 
-      expect { prepare }.to raise_error(
+      expect { prepare_upload }.to raise_error(
         Administrate::MCP::ConfigurationError,
         /Shrine storage :cache \(Shrine::Storage::Memory\) cannot presign uploads/
       )
@@ -71,20 +94,32 @@ RSpec.describe Administrate::MCP::Uploads do
   end
 
   describe '.resolve' do
-    let(:upload_id) { prepare['logo.png'][:upload_id] }
+    let(:upload_id) { prepare_upload['logo.png'][:upload_id] }
 
-    def resolve(as: admin)
-      described_class.resolve(admin: as, upload_id:)
+    def resolve(as: admin, tool: 'widget_create_draft', attribute: 'picture', with: rules)
+      described_class.resolve(admin: as, upload_id:, tool:, attribute:, rules: with)
     end
 
-    it 'returns the cached file data with its real metadata' do
+    it 'returns a checked copy of the uploaded file, under a key no URL points to' do
       put_object(entry_for(upload_id)['key'], png)
 
-      expect(resolve).to eq(
-        'id' => "#{upload_id}.png",
-        'storage' => 'cache',
-        'metadata' => { 'filename' => 'logo.png', 'size' => png.bytesize, 'mime_type' => 'image/png' }
-      )
+      value = resolve
+
+      expect(value).to include('storage' => 'cache')
+      expect(value['id']).not_to eq("#{upload_id}.png")
+      expect(value['id']).to end_with('.png')
+      expect(value['metadata']).to eq('filename' => 'logo.png', 'size' => png.bytesize, 'mime_type' => 'image/png')
+      expect(stored_objects["cache/#{value['id']}"]).to eq(png)
+    end
+
+    it 'keeps the checked content when the client uploads again to the same URL' do
+      put_object(entry_for(upload_id)['key'], png)
+      value = resolve
+
+      put_object(entry_for(upload_id)['key'], '<html><script>alert(1)</script></html>')
+
+      expect(stored_objects["cache/#{value['id']}"]).to eq(png)
+      expect(resolve).to eq(value)
     end
 
     it 'refuses content whose real type is not allowed, whatever the extension' do
@@ -96,14 +131,23 @@ RSpec.describe Administrate::MCP::Uploads do
       )
     end
 
-    it 'refuses a real size above the maximum, since the presigned PUT does not limit it' do
+    it 'refuses a real size above the maximum without reading the content' do
       put_object(entry_for(upload_id)['key'], png)
-      Administrate::MCP.config.uploads.max_size = png.bytesize - 1
+      small = Administrate::MCP.config.uploads.rules(max_size: png.bytesize - 1)
+      uploaders = []
+      allow(Shrine).to receive(:new).and_wrap_original do |original, *args|
+        original.call(*args).tap do |uploader|
+          allow(uploader).to receive(:extract_metadata).and_call_original
+          uploaders << uploader
+        end
+      end
 
-      expect { resolve }.to raise_error(
+      expect { resolve(with: small) }.to raise_error(
         Administrate::MCP::InvalidArgumentError,
         "Upload #{upload_id} is #{png.bytesize} bytes, the maximum is #{png.bytesize - 1}"
       )
+      expect(uploaders).not_to be_empty
+      uploaders.each { |uploader| expect(uploader).not_to have_received(:extract_metadata) }
     end
 
     it 'reports a file that was never uploaded' do
@@ -117,6 +161,14 @@ RSpec.describe Administrate::MCP::Uploads do
       expect { resolve }.to raise_error(Administrate::MCP::InvalidArgumentError, /Upload #{upload_id} expired at/)
     end
 
+    it 'refuses an upload prepared for another action or attribute' do
+      put_object(entry_for(upload_id)['key'], png)
+
+      expect { resolve(tool: 'gadget_relabel') }.to raise_error(
+        Administrate::MCP::InvalidArgumentError, "Upload #{upload_id} was prepared for widget_create_draft picture"
+      )
+    end
+
     it "answers another admin's upload as not found" do
       put_object(entry_for(upload_id)['key'], png)
 
@@ -125,8 +177,10 @@ RSpec.describe Administrate::MCP::Uploads do
     end
 
     it 'answers an unknown upload_id as not found' do
-      expect { described_class.resolve(admin:, upload_id: SecureRandom.uuid) }
-        .to raise_error(Administrate::MCP::InvalidArgumentError, /not found/)
+      expect do
+        described_class.resolve(admin:, upload_id: SecureRandom.uuid, tool: 'widget_create_draft',
+                                attribute: 'picture', rules:)
+      end.to raise_error(Administrate::MCP::InvalidArgumentError, /not found/)
     end
   end
 end
