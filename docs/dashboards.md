@@ -50,8 +50,10 @@ base class, is not applied to every resource. A subclass that wants one declares
     declared params.
   - The block's result decides the answer. A result answering `success? == false` is an error, with
     the result's `error` as the message when it has one. An Active Record object that was never
-    saved or has errors is an error too, with its validation messages. Anything else is a success,
-    including a record the block destroyed.
+    saved or has errors is an error too, with its validation messages. So is `false`, the result of
+    a failed `update` or of a `destroy` a callback aborted; for a member action the message is the
+    loaded record's validation messages when it has any. Anything else is a success, including a
+    record the block destroyed.
   - The tool is announced as destructive unless the declaration says `destructive: false`. Clients
     may ask for confirmation before running a destructive tool, so set it on actions that only add
     or prepare something.

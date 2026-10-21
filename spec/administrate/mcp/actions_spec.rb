@@ -36,6 +36,16 @@ RSpec.describe Administrate::MCP::Actions do
       expect(spec[:predicate]).to eq(:moderate?)
     end
 
+    it 'reads a param spec declared with String keys throughout' do
+      spec = described_class.build_spec(
+        :comment, description: 'Comment',
+                  params: { 'note' => { 'type' => 'string', 'description' => 'A note', 'required' => false } }
+      ) { nil }
+
+      expect(spec[:params]).to eq(note: { type: 'string', description: 'A note' })
+      expect(spec[:required]).to eq([])
+    end
+
     it 'keys params by symbol whichever way they were declared' do
       spec = described_class.build_spec(:comment, description: 'Comment', params: { 'body' => 'The body' }) { nil }
 
@@ -171,6 +181,27 @@ RSpec.describe Administrate::MCP::Actions do
 
       expect(JSON.parse(result.content.first[:text])).to include('status' => 'ok', 'id' => gadget.id)
       expect(Gadget.where(id: gadget.id)).not_to exist
+    end
+
+    it 'reports a block that returns false as an error with the record validation messages' do
+      relabel = build_member_tool do |record:, **|
+        record.errors.add(:label, :blank)
+        false
+      end
+      result = relabel.call(id: gadget.id, server_context: { admin:, scopes: ['write'] })
+
+      expect(result.error?).to be(true)
+      expect(result.content.first[:text]).to eq("Label can't be blank")
+    end
+
+    it 'reports a destroy aborted by a callback as a failure of the action' do
+      relabel = build_member_tool { |record:, **| record.destroy }
+      allow(Gadget).to receive(:find_by).with(id: gadget.id).and_return(gadget)
+      allow(gadget).to receive(:destroy).and_return(false)
+      result = relabel.call(id: gadget.id, server_context: { admin:, scopes: ['write'] })
+
+      expect(result.content.first[:text]).to eq('fix failed')
+      expect(Gadget.where(id: gadget.id)).to exist
     end
 
     it 'reports a record returned with errors as an error' do
