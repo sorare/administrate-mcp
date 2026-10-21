@@ -5,6 +5,7 @@ require 'administrate/mcp/version'
 require 'administrate/mcp/authorization/base'
 require 'administrate/mcp/authorization/permissive'
 require 'administrate/mcp/authorization/pundit'
+require 'administrate/mcp/uploads_configuration'
 
 module Administrate
   module MCP
@@ -64,7 +65,7 @@ module Administrate
                     :has_many_field_classes,
                     :field_serializers
 
-      attr_reader :api_key_token_prefix
+      attr_reader :api_key_token_prefix, :uploads
 
       def initialize
         assign_identity
@@ -101,6 +102,7 @@ module Administrate
         @persist_feedback = false
         @feedback_tool = true
         @sidekiq_stats_provider = nil
+        @uploads = UploadsConfiguration.new
       end
 
       def assign_fields

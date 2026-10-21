@@ -16,6 +16,7 @@ module ConfigureDummy
       c.admin_url_options = { host: 'admin.example.com', protocol: 'https' }
       c.authorization = Administrate::MCP::Authorization::Permissive.new
       c.persist_feedback = true
+      c.register_field('PictureField', as: :attachment)
     end
   end
 end

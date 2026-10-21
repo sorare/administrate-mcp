@@ -55,7 +55,11 @@ module Administrate
           check_roles!(admin, **args)
           audit!(admin, args, server_context)
           reject_reserved_arguments!(args)
-          execute(**args, admin:)
+          execute(**args, admin:, **execute_context(server_context))
+        end
+
+        def execute_context(_server_context)
+          {}
         end
 
         def reject_reserved_arguments!(args)

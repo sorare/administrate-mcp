@@ -119,6 +119,10 @@ module Administrate
           matches?(field_class, Administrate::MCP.config.has_many_field_classes)
         end
 
+        def serializer_for(field_spec)
+          lookup_serializer(resolve_field_class(field_spec))
+        end
+
         def resolve_field_class(field_spec)
           case field_spec
           when Administrate::Field::Deferred

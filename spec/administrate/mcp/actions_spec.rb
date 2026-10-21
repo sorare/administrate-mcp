@@ -349,4 +349,150 @@ RSpec.describe Administrate::MCP::Actions do
       end
     end
   end
+
+  describe 'an action declared with uploads' do
+    include_context 'with presignable storage'
+
+    let(:ctx) { { admin:, scopes: ['write'] } }
+    let(:create_draft) { described_class.all_tools.find { |t| t.name_value == 'widget_create_draft' } }
+
+    def declare_member_action(uploads:, dashboard: WidgetDashboard, model: Widget, **options, &block)
+      spec = described_class.build_spec(:repaint, description: 'Repaint', uploads:, **options, &block)
+      uploads = Administrate::MCP::Uploads::Declarations.action_attributes(dashboard, :repaint, spec[:uploads])
+      definition = described_class::Definition.new(model_class: model, **spec, uploads:)
+      allow(described_class).to(receive(:definitions).and_wrap_original { |original| original.call + [definition] })
+      described_class::ToolFactory.build(definition)
+    end
+
+    it 'publishes an optional upload_id param for each attachment attribute' do
+      schema = create_draft.input_schema.to_h
+
+      expect(schema[:properties]).to include(picture_upload_id: hash_including(type: 'string'))
+      expect(schema[:required]).to eq(%w[name])
+    end
+
+    it 'sets the attribute from the uploaded file' do
+      result = create_draft.call(name: 'Fresh', picture_upload_id: upload_png, server_context: ctx)
+
+      expect(result.error?).to be(false)
+      picture = Widget.find_by!(name: 'Fresh').picture
+      expect(picture).to have_attributes(mime_type: 'image/png', size: png.bytesize, original_filename: 'logo.png')
+      expect(picture.read).to eq(png)
+    end
+
+    it 'leaves the attribute out when no upload_id is given' do
+      create_draft.call(name: 'Fresh', server_context: ctx)
+
+      expect(Widget.find_by!(name: 'Fresh').picture).to be_nil
+    end
+
+    it 'accepts the same upload_id again after the action failed' do
+      upload_id = upload_png
+      allow(Widget).to receive(:create!).and_wrap_original do |original, **attributes|
+        raise ActiveRecord::RecordInvalid if attributes[:name] == 'Taken'
+
+        original.call(**attributes)
+      end
+
+      failed = create_draft.call(name: 'Taken', picture_upload_id: upload_id, server_context: ctx)
+      retried = create_draft.call(name: 'Fresh', picture_upload_id: upload_id, server_context: ctx)
+
+      expect(failed.error?).to be(true)
+      expect(retried.error?).to be(false)
+      expect(Widget.find_by!(name: 'Fresh').picture.read).to eq(png)
+    end
+
+    it "refuses another admin's upload before running the block" do
+      result = create_draft.call(name: 'Fresh', picture_upload_id: upload_png(admin: create(:admin)),
+                                 server_context: ctx)
+
+      expect(result.error?).to be(true)
+      expect(result.content.first[:text]).to match(/Upload .* not found/)
+      expect(Widget.where(name: 'Fresh')).not_to exist
+    end
+
+    it 'hands the resolved value to a member action as params[attribute]' do
+      widget = create(:widget)
+      tool = declare_member_action(uploads: [:picture]) do |record:, params:, **|
+        record.update!(picture: params[:picture])
+      end
+
+      tool.call(id: widget.id, picture_upload_id: upload_png(tool: 'widget_repaint'), server_context: ctx)
+
+      expect(widget.reload.picture.read).to eq(png)
+    end
+
+    it 'refuses an upload prepared for another action' do
+      widget = create(:widget)
+      tool = declare_member_action(uploads: [:picture]) do |record:, params:, **|
+        record.update!(picture: params[:picture])
+      end
+
+      result = tool.call(id: widget.id, picture_upload_id: upload_png, server_context: ctx)
+
+      expect(result.content.first[:text]).to include('was prepared for widget_create_draft picture')
+      expect(widget.reload.picture).to be_nil
+    end
+
+    it 'applies per-attribute content types and maximum size' do
+      declare_member_action(uploads: { picture: { content_types: { '.gif' => 'image/gif' }, max_size: 100 } }) do |**|
+        true
+      end
+
+      expect { prepare_upload({ 'logo.png' => 10 }, tool: 'widget_repaint') }
+        .to raise_error(Administrate::MCP::InvalidArgumentError, /logo\.png is not an allowed file type \(\.gif\)/)
+      expect { prepare_upload({ 'logo.gif' => 101 }, tool: 'widget_repaint') }
+        .to raise_error(Administrate::MCP::InvalidArgumentError, /between 1 and 100 bytes/)
+      expect(prepare_upload({ 'logo.gif' => 100 }, tool: 'widget_repaint')['logo.gif'][:fields])
+        .to include('Content-Type' => 'image/gif')
+    end
+
+    it 'refuses to prepare uploads for an action whose scope the caller was not granted' do
+      declare_member_action(uploads: [:picture], scope: :billing) { |**| true }
+
+      expect { prepare_upload(tool: 'widget_repaint') }
+        .to raise_error(Administrate::MCP::InvalidArgumentError, /No action widget_repaint .* available to you/)
+      expect(prepare_upload(tool: 'widget_repaint', scopes: %w[write billing])).to include('logo.png')
+    end
+
+    it 'uses the granted scopes even when the client sends its own' do
+      declare_member_action(uploads: [:picture], scope: :billing) { |**| true }
+      tool = Administrate::MCP::Tools::UploadsPrepare
+
+      result = tool.call(tool: 'widget_repaint', attribute: 'picture', files: { 'logo.png': 10 }, scopes: ['billing'],
+                         server_context: { admin:, scopes: ['write'] })
+
+      expect(result.content.first[:text]).to include('No action widget_repaint')
+      expect(Administrate::MCP::UploadBatch.count).to eq(0)
+    end
+
+    {
+      'a list of content types' => { content_types: %w[image/png] },
+      'an extension without its dot' => { content_types: { 'png' => 'image/png' } },
+      'an unknown rule' => { max_bytes: 1024 },
+      'a non-positive max_size' => { max_size: 0 }
+    }.each do |label, rules|
+      it "refuses #{label} when the dashboard loads" do
+        expect { described_class.build_spec(:repaint, description: 'Repaint', uploads: { picture: rules }) { nil } }
+          .to raise_error(ArgumentError, /repaint: uploads: picture/)
+      end
+    end
+
+    it 'refuses an uploads: entry that is not an attachment attribute' do
+      expect { declare_member_action(uploads: [:name]) { |**| true } }
+        .to raise_error(ArgumentError, /uploads: names name, which are not attachment attributes/)
+    end
+
+    it 'refuses uploads: true on a dashboard without an attachment attribute' do
+      expect { declare_member_action(uploads: true, dashboard: GadgetDashboard, model: Gadget) { |**| true } }
+        .to raise_error(ArgumentError, /uploads: true, but the dashboard has no attachment attribute/)
+    end
+
+    it 'publishes no upload param while uploads are disabled' do
+      Administrate::MCP.config.uploads.enabled = false
+      described_class.reset!
+
+      expect(create_draft.input_schema.to_h[:properties].keys).to eq([:name])
+    end
+  end
 end

@@ -18,6 +18,23 @@ minor release may change behaviour a host depends on; the entry says so when it 
   the `on_tool_call` audit and the error reporting work as for member actions, and the tool keeps
   the `<resource>_<action>` name. When the block returns an Active Record object, the response
   includes its primary key as `id`. `on: :member` stays the default.
+- Presigned uploads for Shrine attachments, off until `config.uploads.enabled` is set. The
+  `uploads_prepare` tool takes the target action's `tool` name, an `attribute` and `files`, an
+  object of filename to size in bytes. It is only published to, and only answers, a caller
+  authorized for an action that accepts uploads for that attribute. It records an
+  `administrate_mcp_upload_batches` row and returns `{ filename => { upload_id, method, url,
+  fields } }`, one presigned `POST` per file whose policy bounds the content length. An
+  `mcp_action` declared with `uploads:` (`true`, a list of attributes, or per-attribute
+  `content_types:` and `max_size:`) takes an optional `<attribute>_upload_id` for each attachment
+  attribute; the engine resolves it and the block receives the file as `params[:<attribute>]`.
+  Resolving checks the owning admin (another admin's id is not found), the action and attribute
+  the upload was prepared for, the batch expiry, that the file was uploaded, and its real size
+  and content type, on a copy under a key no URL points to; the copy is reused if the same id is
+  passed again. Defaults: png, jpeg and webp, 10 MB, 10 files per call, 15-minute URLs, 1-hour
+  batches. `Administrate::MCP::CleanExpiredUploadBatches` deletes expired batches. The default
+  storage is the Shrine `:cache` storage, replaceable through `config.uploads.storage`; the gem
+  gains no dependency. Hosts that enable uploads need the new migration
+  (`bin/rails administrate_mcp:install:migrations`).
 
 ### Changed
 

@@ -66,6 +66,9 @@ base class, is not applied to every resource. A subclass that wants one declares
     since no record lookup does it. The response carries the primary key of the record the block
     returns, so return the created record for the client to act on it; a block that returns
     something else gets a response without `id`.
+  - `uploads:` (`true`, a list of attachment attributes, or per-attribute `content_types:` and
+    `max_size:`) adds an optional `<attribute>_upload_id` param for each of them, and the block
+    receives the uploaded file as `params[:<attribute>]`. See [Presigned uploads](uploads.md).
 
 ## Search
 

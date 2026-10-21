@@ -17,6 +17,7 @@ ActiveRecord::Schema[8.1].define(version: 0) do
     t.integer :price
     t.boolean :featured, null: false, default: false
     t.string :secret
+    t.jsonb :picture_data
     t.timestamps
   end
 
