@@ -68,7 +68,9 @@ module Administrate
         end
 
         def normalize_params(params)
-          params.transform_values { |spec| spec.is_a?(String) ? { type: 'string', description: spec } : spec }
+          params.to_h do |name, spec|
+            [name.to_sym, spec.is_a?(String) ? { type: 'string', description: spec } : spec.to_h.symbolize_keys]
+          end
         end
 
         def definitions
@@ -189,7 +191,7 @@ module Administrate
             arguments = { admin:, params: Uploads::Declarations.resolve_params(defn, admin, declared) }
             arguments[:record] = Actions.find_record!(defn.model_class, id) if defn.on == :member
             result = defn.invoke.call(**arguments)
-            return { error: failure_message(defn, result) } if failed?(result)
+            return { error: failure_message(defn, result, arguments[:record]) } if failed?(result)
 
             { data: success_data(defn, id, result) }
           end
@@ -200,13 +202,15 @@ module Administrate
           end
 
           def failed?(result)
-            return !result.persisted? || result.errors.any? if result.is_a?(ActiveRecord::Base)
+            return true if result == false
+            return result.new_record? || result.errors.any? if result.is_a?(ActiveRecord::Base)
 
             result.respond_to?(:success?) && !result.success?
           end
 
-          def failure_message(defn, result)
-            message = result.is_a?(ActiveRecord::Base) ? result.errors.full_messages.to_sentence : result.try(:error)
+          def failure_message(defn, result, record)
+            invalid = result.is_a?(ActiveRecord::Base) ? result : (record if result == false)
+            message = invalid ? invalid.errors.full_messages.to_sentence : result.try(:error)
             message.presence || "#{defn.name} failed"
           end
         end

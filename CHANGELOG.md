@@ -38,9 +38,12 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ### Changed
 
-- **Behaviour change for hosts:** an `mcp_action` block that returns an Active Record object that is
-  not persisted or has errors is now reported as an error, with the record's validation messages,
-  instead of `status: ok`.
+- **Behaviour change for hosts:** an `mcp_action` block that returns an Active Record object that
+  was never saved or has errors is now reported as an error, with the record's validation messages,
+  instead of `status: ok`. A record the block destroyed is still a success. A block that returns
+  `false`, as `record.update(...)` does on a validation error and `record.destroy` does when a
+  callback aborts it, is now an error too, with the loaded record's validation messages for a member
+  action when it has any. A block that returned `false` to mean success must return something else.
 
 ## [0.3.1] - 2026-10-20
 
