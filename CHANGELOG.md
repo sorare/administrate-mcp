@@ -8,6 +8,8 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-21
+
 ### Added
 
 - Collection-level write actions: `mcp_action name, on: :collection, ...` publishes a tool with no
@@ -175,7 +177,8 @@ minor release may change behaviour a host depends on; the entry says so when it 
   took the gem from git before 0.1.0 must reinstall its migrations rather than migrate
   incrementally.
 
-[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/sorare/administrate-mcp/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/sorare/administrate-mcp/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/sorare/administrate-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sorare/administrate-mcp/compare/v0.1.0...v0.2.0
