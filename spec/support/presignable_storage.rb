@@ -33,6 +33,10 @@ RSpec.shared_context 'with presignable storage' do
       objects[context.params[:key]] = objects.fetch(source)
       { copy_object_result: { etag: '"copied"' } }
     })
+    client.stub_responses(:delete_object, lambda { |context|
+      objects.delete(context.params[:key])
+      {}
+    })
     client.stub_responses(:get_object, lambda { |context|
       body = objects[context.params[:key]]
       body ? { body:, content_length: body.bytesize } : 'NoSuchKey'
@@ -52,8 +56,8 @@ RSpec.shared_context 'with presignable storage' do
   end
 
   def prepare_upload(files = { 'logo.png' => 1024 }, admin: self.admin, tool: 'widget_create_draft',
-                     attribute: 'picture')
-    Administrate::MCP::Uploads.prepare(admin:, tool:, attribute:, files:)
+                     attribute: 'picture', scopes: ['write'])
+    Administrate::MCP::Uploads.prepare(admin:, scopes:, tool:, attribute:, files:)
   end
 
   def upload_png(**)

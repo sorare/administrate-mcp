@@ -34,9 +34,14 @@ module Administrate
           additionalProperties: false
         )
 
-        def self.execute(admin:, tool:, attribute:, files:)
-          json_response(Administrate::MCP::Uploads.prepare(admin:, tool:, attribute:, files:))
+        def self.execute(admin:, scopes:, tool:, attribute:, files:)
+          json_response(Administrate::MCP::Uploads.prepare(admin:, scopes:, tool:, attribute:, files:))
         end
+
+        def self.execute_context(server_context)
+          { scopes: server_context[:scopes] || [] }
+        end
+        private_class_method :execute_context
       end
     end
   end

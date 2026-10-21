@@ -62,7 +62,7 @@ module Administrate
             description:,
             params: normalized.transform_values { |spec| spec.except(:required) },
             required: normalized.reject { |_, spec| spec[:required] == false }.keys,
-            uploads: Uploads::Declarations.normalize(uploads),
+            uploads: Uploads::Declarations.normalize(uploads, action_name: name),
             invoke:
           }
         end
@@ -87,8 +87,8 @@ module Administrate
           "#{definition.model_class.name.underscore.tr('/', '_')}_#{definition.name}"
         end
 
-        def available_to?(admin, definition)
-          authorized_for_discovery?(admin, definition)
+        def available_to?(admin, definition, scopes:)
+          scopes.map(&:to_sym).include?(definition.scope) && authorized_for_discovery?(admin, definition)
         end
 
         def all_tools
@@ -98,13 +98,8 @@ module Administrate
         # Tool classes the caller may both see and run: write scope granted AND the authorization
         # predicate satisfied at the role level. The actual call re-checks it against the record.
         def tools_for(server_context)
-          granted = (server_context[:scopes] || []).map(&:to_sym)
-          admin = server_context[:admin]
-
-          all_tools.select do |tool|
-            defn = tool.definition
-            granted.include?(defn.scope) && authorized_for_discovery?(admin, defn)
-          end
+          scopes = server_context[:scopes] || []
+          all_tools.select { |tool| available_to?(server_context[:admin], tool.definition, scopes:) }
         end
 
         def reset!

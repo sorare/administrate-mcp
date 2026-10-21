@@ -19,6 +19,14 @@ RSpec.describe Administrate::MCP::Tools::UploadsPrepare do
       expect(tool_names).to include('uploads_prepare')
     end
 
+    it 'works out the caller\'s action tools once per server build' do
+      allow(Administrate::MCP::Actions).to receive(:tools_for).and_call_original
+
+      tool_names
+
+      expect(Administrate::MCP::Actions).to have_received(:tools_for).once
+    end
+
     it 'is not published to a caller without such an action' do
       Administrate::MCP.config.authorization = Class.new(Administrate::MCP::Authorization::Base) do
         def authorized?(_admin, _record_or_class, action) = action != :create?

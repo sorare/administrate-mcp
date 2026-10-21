@@ -122,13 +122,29 @@ RSpec.describe Administrate::MCP::Uploads do
       expect(resolve).to eq(value)
     end
 
-    it 'refuses content whose real type is not allowed, whatever the extension' do
+    it 'refuses content whose real type is not allowed, whatever the extension, and deletes the copy' do
       put_object(entry_for(upload_id)['key'], '%PDF-1.4 not an image')
 
       expect { resolve }.to raise_error(
         Administrate::MCP::InvalidArgumentError,
         "Upload #{upload_id} is application/pdf, expected one of image/png, image/jpeg, image/webp"
       )
+      expect(stored_objects.keys).to eq(["cache/#{upload_id}.png"])
+    end
+
+    it 'returns the value another call recorded meanwhile, and deletes its own copy' do
+      put_object(entry_for(upload_id)['key'], png)
+      winner = { 'id' => 'winner.png', 'storage' => 'cache', 'metadata' => {} }
+      storage = Administrate::MCP.config.uploads.storage
+      allow(Administrate::MCP.config.uploads).to receive(:storage).and_return(storage)
+      allow(storage).to receive(:fetch).and_wrap_original do |original, *args, **kwargs|
+        original.call(*args, **kwargs).tap do
+          Administrate::MCP::UploadBatch.sole.record_value!(upload_id, winner)
+        end
+      end
+
+      expect(resolve).to eq(winner)
+      expect(stored_objects.keys).to eq(["cache/#{upload_id}.png"])
     end
 
     it 'refuses a real size above the maximum without reading the content' do
@@ -148,6 +164,7 @@ RSpec.describe Administrate::MCP::Uploads do
       )
       expect(uploaders).not_to be_empty
       uploaders.each { |uploader| expect(uploader).not_to have_received(:extract_metadata) }
+      expect(stored_objects.keys).to eq(["cache/#{upload_id}.png"])
     end
 
     it 'reports a file that was never uploaded' do

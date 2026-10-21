@@ -39,8 +39,10 @@ end
 - a hash of attribute to `content_types:` (extension to content type, like
   `allowed_content_types`) and `max_size:`, which override the defaults for that attribute.
 
-An attribute that is not an attachment raises when the tools are built. A call without the param
-leaves `params[:<attribute>]` unset.
+An attribute that is not an attachment raises when the tools are built. So does a rule other than
+`content_types:` and `max_size:`, a `content_types:` that is not a hash of `.ext` keys, or a
+`max_size:` that is not a positive integer. A call without the param leaves `params[:<attribute>]`
+unset.
 
 Out of the box, uploads work with Shrine: `Administrate::Field::Shrine` is the only field mapped to
 `:attachment` by default, and the default storage is a Shrine storage. An Active Storage dashboard
@@ -76,8 +78,9 @@ the bucket with that type, so such a file is stored cross-site scripting for any
 
 `uploads_prepare` requires the OAuth `write` scope and the `default_required_roles`, and is only
 published to a caller who can use an action that accepts uploads. It refuses the call unless the
-named action exists, accepts an upload for the named attribute, and is authorized for the caller
-(the same check that decides whether the action is listed). It also refuses a file whose extension
+named action exists, accepts an upload for the named attribute, and is available to the caller: its
+scope is granted and its predicate passes, the same check that decides whether the action is
+listed. It also refuses a file whose extension
 is not allowed for that attribute, a declared size above its maximum, and more than `max_files`
 files, and records nothing in that case.
 
@@ -93,8 +96,10 @@ Resolving an `upload_id` checks that:
 
 The checks run on a copy of the uploaded object, under a key no presigned URL points to, and the
 action receives that copy. Uploading again to the same URL afterwards changes nothing that was
-checked. The checked copy is remembered: passing the same `upload_id` again, for example after the
-action failed on another param, returns it without a new upload.
+checked. A copy that fails a check is deleted. The checked copy is remembered: passing the same
+`upload_id` again, for example after the action failed on another param, returns it without a new
+upload. The storage is read outside any database transaction; only recording the checked copy
+locks the batch row, and if two calls race, the first recorded copy wins and the other is deleted.
 
 A failed check is a tool error and the action's block does not run.
 
@@ -145,5 +150,8 @@ class MyStorage
   #    client cannot write to and describe the copy, and when it is above max_size, return its size
   #    without reading the content.
   def fetch(key, filename:, max_size:); end
+
+  # Deletes the copy behind a value fetch returned, when it failed a check or lost a race.
+  def delete(value); end
 end
 ```

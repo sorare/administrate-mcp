@@ -48,9 +48,10 @@ module Administrate
 
         def discover_tools(server_context)
           load_host_tools
+          action_tools = Actions.tools_for(server_context)
           built_in = built_in_tools
-          built_in -= [Tools::UploadsPrepare] unless Uploads.available?(server_context)
-          (built_in + host_tools).uniq + Actions.tools_for(server_context)
+          built_in -= [Tools::UploadsPrepare] unless Uploads::Declarations.any?(action_tools)
+          (built_in + host_tools).uniq + action_tools
         end
 
         def built_in_tools

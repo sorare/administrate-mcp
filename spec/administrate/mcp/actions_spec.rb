@@ -356,8 +356,8 @@ RSpec.describe Administrate::MCP::Actions do
     let(:ctx) { { admin:, scopes: ['write'] } }
     let(:create_draft) { described_class.all_tools.find { |t| t.name_value == 'widget_create_draft' } }
 
-    def declare_member_action(uploads:, dashboard: WidgetDashboard, model: Widget, &block)
-      spec = described_class.build_spec(:repaint, description: 'Repaint', uploads:, &block)
+    def declare_member_action(uploads:, dashboard: WidgetDashboard, model: Widget, **options, &block)
+      spec = described_class.build_spec(:repaint, description: 'Repaint', uploads:, **options, &block)
       uploads = Administrate::MCP::Uploads::Declarations.action_attributes(dashboard, :repaint, spec[:uploads])
       definition = described_class::Definition.new(model_class: model, **spec, uploads:)
       allow(described_class).to(receive(:definitions).and_wrap_original { |original| original.call + [definition] })
@@ -445,6 +445,37 @@ RSpec.describe Administrate::MCP::Actions do
         .to raise_error(Administrate::MCP::InvalidArgumentError, /between 1 and 100 bytes/)
       expect(prepare_upload({ 'logo.gif' => 100 }, tool: 'widget_repaint')['logo.gif'][:fields])
         .to include('Content-Type' => 'image/gif')
+    end
+
+    it 'refuses to prepare uploads for an action whose scope the caller was not granted' do
+      declare_member_action(uploads: [:picture], scope: :billing) { |**| true }
+
+      expect { prepare_upload(tool: 'widget_repaint') }
+        .to raise_error(Administrate::MCP::InvalidArgumentError, /No action widget_repaint .* available to you/)
+      expect(prepare_upload(tool: 'widget_repaint', scopes: %w[write billing])).to include('logo.png')
+    end
+
+    it 'uses the granted scopes even when the client sends its own' do
+      declare_member_action(uploads: [:picture], scope: :billing) { |**| true }
+      tool = Administrate::MCP::Tools::UploadsPrepare
+
+      result = tool.call(tool: 'widget_repaint', attribute: 'picture', files: { 'logo.png': 10 }, scopes: ['billing'],
+                         server_context: { admin:, scopes: ['write'] })
+
+      expect(result.content.first[:text]).to include('No action widget_repaint')
+      expect(Administrate::MCP::UploadBatch.count).to eq(0)
+    end
+
+    {
+      'a list of content types' => { content_types: %w[image/png] },
+      'an extension without its dot' => { content_types: { 'png' => 'image/png' } },
+      'an unknown rule' => { max_bytes: 1024 },
+      'a non-positive max_size' => { max_size: 0 }
+    }.each do |label, rules|
+      it "refuses #{label} when the dashboard loads" do
+        expect { described_class.build_spec(:repaint, description: 'Repaint', uploads: { picture: rules }) { nil } }
+          .to raise_error(ArgumentError, /repaint: uploads: picture/)
+      end
     end
 
     it 'refuses an uploads: entry that is not an attachment attribute' do

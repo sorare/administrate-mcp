@@ -7,15 +7,21 @@ module Administrate
       # `<attribute>_upload_id`, the schema of those params, and turning them into attachment
       # values before the action's block runs.
       module Declarations
+        RULE_KEYS = %i[content_types max_size].freeze
+
         class << self
-          def normalize(uploads)
+          def normalize(uploads, action_name:)
             return true if uploads == true
             return {} unless uploads
             return Array(uploads).to_h { |attribute| [attribute.to_sym, {}] } unless uploads.is_a?(Hash)
 
             uploads.to_h do |attribute, rules|
-              [attribute.to_sym, rules.to_h.symbolize_keys.slice(:content_types, :max_size)]
+              [attribute.to_sym, validate_rules!("#{action_name}: uploads: #{attribute}", rules)]
             end
+          end
+
+          def any?(action_tools)
+            config.enabled && action_tools.any? { |tool| tool.definition.uploads.any? }
           end
 
           def action_attributes(dashboard_class, action_name, declared)
@@ -55,6 +61,30 @@ module Administrate
           end
 
           private
+
+          def validate_rules!(context, rules)
+            raise ArgumentError, "#{context} must be a hash of rules" unless rules.is_a?(Hash)
+
+            rules = rules.symbolize_keys
+            unknown = rules.keys - RULE_KEYS
+            raise ArgumentError, "#{context}: unknown rule(s) #{unknown.join(', ')}" if unknown.any?
+            unless rules[:content_types].nil? || content_types?(rules[:content_types])
+              raise ArgumentError, "#{context}: content_types: must be a hash of extension to content type, " \
+                                   "such as { '.png' => 'image/png' }"
+            end
+            return rules if rules[:max_size].nil? || positive_integer?(rules[:max_size])
+
+            raise ArgumentError, "#{context}: max_size: must be a positive number of bytes"
+          end
+
+          def positive_integer?(value)
+            value.is_a?(Integer) && value.positive?
+          end
+
+          def content_types?(content_types)
+            content_types.is_a?(Hash) && content_types.any? &&
+              content_types.all? { |extension, type| extension.to_s.match?(/\A\.\w+\z/) && type.is_a?(String) }
+          end
 
           def param_name(attribute)
             :"#{attribute}_upload_id"

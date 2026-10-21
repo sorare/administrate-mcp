@@ -9,8 +9,8 @@ module Administrate
     # copy so a retried action gets the same file.
     module Uploads
       class << self
-        def prepare(admin:, tool:, attribute:, files:)
-          definition = upload_action!(admin, tool.to_s, attribute.to_sym)
+        def prepare(admin:, scopes:, tool:, attribute:, files:)
+          definition = upload_action!(admin, scopes, tool.to_s, attribute.to_sym)
           rules = rules_for(definition, attribute.to_sym)
           storage = presignable_storage!
           entries = build_entries(files, rules, tool: tool.to_s, attribute: attribute.to_s)
@@ -24,18 +24,10 @@ module Administrate
         end
 
         def resolve(admin:, upload_id:, tool:, attribute:, rules:)
-          UploadBatch.transaction do
-            batch, entry = find_entry!(admin, upload_id.to_s, tool, attribute)
-            next entry['value'] if entry['value']
+          batch, entry = find_entry!(admin, upload_id.to_s, tool, attribute)
+          return entry['value'] if entry['value']
 
-            value = fetch!(upload_id, entry, rules).value
-            batch.record_value!(upload_id.to_s, value)
-            value
-          end
-        end
-
-        def available?(server_context)
-          config.enabled && Actions.tools_for(server_context).any? { |tool| tool.definition.uploads.any? }
+          record_value(batch, upload_id.to_s, fetch!(upload_id, entry, rules).value)
         end
 
         def rules_for(definition, attribute)
@@ -48,9 +40,9 @@ module Administrate
           Administrate::MCP.config.uploads
         end
 
-        def upload_action!(admin, tool, attribute)
+        def upload_action!(admin, scopes, tool, attribute)
           definition = Actions.definitions.find { |candidate| Actions.tool_name(candidate) == tool }
-          return definition if definition&.uploads&.key?(attribute) && Actions.available_to?(admin, definition)
+          return definition if definition&.uploads&.key?(attribute) && Actions.available_to?(admin, definition, scopes:)
 
           raise InvalidArgumentError, "No action #{tool} that accepts an upload for #{attribute} is available to you"
         end
@@ -95,7 +87,7 @@ module Administrate
         end
 
         def find_entry!(admin, upload_id, tool, attribute)
-          batch = UploadBatch.with_upload(upload_id).lock.find_by(admin:)
+          batch = UploadBatch.with_upload(upload_id).find_by(admin:)
           raise InvalidArgumentError, "Upload #{upload_id} not found" unless batch
           raise InvalidArgumentError, "Upload #{upload_id} expired at #{batch.expires_at.iso8601}" if batch.expired?
 
@@ -111,18 +103,31 @@ module Administrate
           upload = config.storage.fetch(entry['key'], filename: entry['filename'], max_size: rules.max_size)
           raise InvalidArgumentError, "Upload #{upload_id} has not been uploaded yet" unless upload
 
-          check_content!(upload_id, upload, rules)
-          upload
+          error = content_error(upload_id, upload, rules)
+          return upload unless error
+
+          config.storage.delete(upload.value)
+          raise InvalidArgumentError, error
         end
 
-        def check_content!(upload_id, upload, rules)
-          if upload.size.to_i > rules.max_size
-            raise InvalidArgumentError, "Upload #{upload_id} is #{upload.size} bytes, the maximum is #{rules.max_size}"
-          end
-          return if rules.allowed_content_type?(upload.mime_type)
+        def record_value(batch, upload_id, value)
+          UploadBatch.transaction do
+            locked = UploadBatch.lock.find(batch.id)
+            recorded = locked.file(upload_id)['value']
+            next locked.record_value!(upload_id, value) && value unless recorded
 
-          raise InvalidArgumentError, "Upload #{upload_id} is #{upload.mime_type || 'of an unknown type'}, " \
-                                      "expected one of #{rules.content_types.values.uniq.join(', ')}"
+            config.storage.delete(value)
+            recorded
+          end
+        end
+
+        def content_error(upload_id, upload, rules)
+          if upload.size.to_i > rules.max_size
+            "Upload #{upload_id} is #{upload.size} bytes, the maximum is #{rules.max_size}"
+          elsif !rules.allowed_content_type?(upload.mime_type)
+            "Upload #{upload_id} is #{upload.mime_type || 'of an unknown type'}, " \
+              "expected one of #{rules.content_types.values.uniq.join(', ')}"
+          end
         end
       end
     end

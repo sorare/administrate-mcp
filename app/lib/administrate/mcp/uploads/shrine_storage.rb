@@ -37,10 +37,14 @@ module Administrate
 
           copy = uploader.upload(original, location: "#{SecureRandom.uuid}#{File.extname(key)}")
           copy.open do
-            next Upload.new(mime_type: nil, size: copy.size, value: nil) if copy.size.to_i > max_size
+            next Upload.new(mime_type: nil, size: copy.size, value: copy.data) if copy.size.to_i > max_size
 
             describe(copy, filename)
           end
+        end
+
+        def delete(value)
+          uploader_class.uploaded_file(value).delete
         end
 
         private
