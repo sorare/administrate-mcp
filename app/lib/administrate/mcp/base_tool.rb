@@ -106,12 +106,17 @@ module Administrate
           ::MCP::Tool::Response.new([{ type: 'text', text: }])
         end
 
-        def json_response(data)
-          ::MCP::Tool::Response.new([{ type: 'text', text: data.to_json }])
+        def json_response(data, structured: false)
+          ::MCP::Tool::Response.new([{ type: 'text', text: data.to_json }], structured_content: (data if structured))
         end
 
-        def error_response(message)
-          ::MCP::Tool::Response.new([{ type: 'text', text: message }], error: true)
+        def error_response(message, data: nil)
+          content = [{ type: 'text', text: message }]
+          return ::MCP::Tool::Response.new(content, error: true) if data.nil?
+
+          structured = { error: message, data: }
+          content << { type: 'text', text: structured.to_json }
+          ::MCP::Tool::Response.new(content, error: true, structured_content: structured)
         end
       end
     end

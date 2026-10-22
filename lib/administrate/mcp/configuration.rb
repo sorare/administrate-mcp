@@ -59,6 +59,7 @@ module Administrate
                     :persist_feedback,
                     :feedback_tool,
                     :sidekiq_stats_provider,
+                    :action_data_max_bytes,
                     :admin_route_namespace,
                     :admin_url_options,
                     :skipped_field_classes,
@@ -102,6 +103,7 @@ module Administrate
         @persist_feedback = false
         @feedback_tool = true
         @sidekiq_stats_provider = nil
+        @action_data_max_bytes = 32_768
         @uploads = UploadsConfiguration.new
       end
 

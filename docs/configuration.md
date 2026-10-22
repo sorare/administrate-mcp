@@ -111,6 +111,7 @@ class Configuration
                 :persist_feedback,
                 :feedback_tool,
                 :sidekiq_stats_provider,
+                :action_data_max_bytes,
                 :admin_route_namespace,
                 :admin_url_options,
                 :skipped_field_classes,
@@ -148,6 +149,7 @@ class Configuration
     @persist_feedback = false
     @feedback_tool = true
     @sidekiq_stats_provider = nil
+    @action_data_max_bytes = 32_768
   end
 
   def assign_fields
@@ -197,6 +199,7 @@ end
 | `persist_feedback`          | `false`                            | Whether `report_mcp_improvement` creates an `Administrate::MCP::Feedback` row before calling `on_feedback`. False needs no `administrate_mcp_feedbacks` table at all             |
 | `feedback_tool`             | `true`                             | Whether `report_mcp_improvement` is published                                                                                                                                    |
 | `sidekiq_stats_provider`    | `nil`                              | Object answering `counts`, `total_counts`, `queues`, `stats_cleared_at`; a class name String or a Proc is resolved lazily so autoloaded providers can be named in an initializer |
+| `action_data_max_bytes`     | `32_768`                           | Largest `data` an `mcp_action` may return, in bytes of JSON; larger data is an error. `nil` removes the limit. See [Returning data from an action](dashboards.md#returning-data-from-an-action) |
 | `admin_route_namespace`     | `:admin`                           | Namespace record URLs are built from                                                                                                                                             |
 | `admin_url_options`         | `{}`                               | Options passed to `polymorphic_url`; when no `:host` is given, host, protocol and port are taken from `admin_origin`                                                             |
 | `skipped_field_classes`     | Password                           | Field class names never serialized                                                                                                                                               |

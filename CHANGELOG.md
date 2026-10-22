@@ -8,6 +8,30 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Added
+
+- An `mcp_action` block can send data back to the client. It returns
+  `Administrate::MCP::ActionResult.success(record:, data:)`, or any result object answering
+  `mcp_data`, and the answer gains a `data` key next to `status`, `model`, `id` and `action`, which
+  are unchanged. The record, optional, goes through the same checks as a record returned directly,
+  so an unsaved or invalid one is still an error and a collection action still answers its `id`.
+  `ActionResult.failure(message, data:)` is an error whose first content block is the message, as
+  before; when there is data, a second block carries `{ "error": message, "data": … }` as JSON and
+  the result's `structuredContent` carries the same object. The data must be a Hash of plain JSON
+  values nested at most 32 levels deep, with valid UTF-8 strings; the engine encodes a copy
+  built from those values, never the host's objects, and its JSON may be at most
+  `config.action_data_max_bytes` (new, 32 KB by default, `nil` for no limit). Anything else is
+  answered as an error naming the offending path and saying the action ran. A plain Hash returned
+  by a block is still not sent back. See
+  [Returning data from an action](docs/dashboards.md#returning-data-from-an-action).
+
+### Changed
+
+- A successful `mcp_action` call now also returns its answer as the result's `structuredContent`,
+  the same object as the JSON in its text content, which is unchanged.
+- A tool error may now carry a second content block. Clients that read only the first block still
+  get the message on its own; only failures that return data add the second block.
+
 ## [0.4.0] - 2026-10-21
 
 ### Added
