@@ -53,7 +53,8 @@ base class, is not applied to every resource. A subclass that wants one declares
     saved or has errors is an error too, with its validation messages. So is `false`, the result of
     a failed `update` or of a `destroy` a callback aborted; for a member action the message is the
     loaded record's validation messages when it has any. Anything else is a success, including a
-    record the block destroyed.
+    record the block destroyed. To send data back with the answer, return an
+    `Administrate::MCP::Result`; see [Returning data from an action](#returning-data-from-an-action).
   - The tool is announced as destructive unless the declaration says `destructive: false`. Clients
     may ask for confirmation before running a destructive tool, so set it on actions that only add
     or prepare something.
@@ -71,6 +72,49 @@ base class, is not applied to every resource. A subclass that wants one declares
   - `uploads:` (`true`, a list of attachment attributes, or per-attribute `content_types:` and
     `max_size:`) adds an optional `<attribute>_upload_id` param for each of them, and the block
     receives the uploaded file as `params[:<attribute>]`. See [Presigned uploads](uploads.md).
+
+## Returning data from an action
+
+An action answers `{ status, model, id, action }` by default. When the client needs more than that,
+such as what an import created and what it skipped, the block returns an `Administrate::MCP::Result`
+and the response gains a `data` key:
+
+```ruby
+mcp_action :import_batch,
+           on: :collection,
+           description: 'Import orders from a marketplace export.',
+           params: { references: { type: 'array', items: { type: 'string' } } } do |admin:, params:|
+  report = Orders::ImportBatch.call!(references: params[:references], admin:)
+  next Administrate::MCP::Result.failure('No order matched', data: { unknown: report.unknown }) if report.empty?
+
+  Administrate::MCP::Result.success(record: report.batch, data: { created: report.created.size, unknown: report.unknown })
+end
+```
+
+```json
+{ "status": "ok", "model": "order", "id": 42, "action": "import_batch", "data": { "created": 3, "unknown": ["X-9"] } }
+```
+
+- `Result.success(record:, data:)`: `record` is optional and is checked as if the block had returned
+  it, so an unsaved or invalid record is still an error, and a collection action still answers its
+  `id`. `Result.new(record:, data:)` is the same thing.
+- `Result.failure(message, data:)` is an error with `message`, or `<action> failed` without one. The
+  first content block of the error stays the message on its own; when there is data, a second one
+  carries `{ "error": message, "data": … }` as JSON.
+- Any result object that answers `mcp_data` with a Hash works the same way, so a host's own service
+  result can carry its data without being wrapped. `success?` and `error` are read from it as for
+  any other result.
+- A plain Hash returned by the block is not sent back, as before: data reaches the client only when
+  the block asks for it, never because a service happened to return a Hash.
+- `data` must be a Hash of JSON values: Hashes with String or Symbol keys, Arrays, Strings, Symbols,
+  Integers, finite Floats, `true`, `false` and `nil`. Convert anything else, such as a time
+  (`at.iso8601`) or a record (`record.id`), yourself. Its JSON may be at most
+  `config.action_data_max_bytes` (32 KB by default; `nil` removes the limit), so that an action
+  cannot fill the client's context. Return counts and the few items the client must act on, not
+  every row.
+- Data that breaks either rule is answered as an error naming the offending path, for example
+  `data.report.rows[1] is an Object`. The block has already run by then, so the message says the
+  action ran: fix the action rather than retrying the call.
 
 ## Search
 

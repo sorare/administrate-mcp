@@ -110,8 +110,10 @@ module Administrate
           ::MCP::Tool::Response.new([{ type: 'text', text: data.to_json }])
         end
 
-        def error_response(message)
-          ::MCP::Tool::Response.new([{ type: 'text', text: message }], error: true)
+        def error_response(message, data: nil)
+          content = [{ type: 'text', text: message }]
+          content << { type: 'text', text: { error: message, data: }.to_json } unless data.nil?
+          ::MCP::Tool::Response.new(content, error: true)
         end
       end
     end

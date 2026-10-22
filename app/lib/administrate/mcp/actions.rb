@@ -177,7 +177,11 @@ module Administrate
             end
             klass.define_singleton_method(:execute) do |admin:, id: nil, **params|
               outcome = ToolFactory.send(:invoke, defn, admin, id, params)
-              outcome.key?(:error) ? error_response(outcome[:error]) : json_response(outcome[:data])
+              if outcome.key?(:error)
+                error_response(outcome[:error], data: outcome[:details])
+              else
+                json_response(outcome[:data])
+              end
             end
           end
 
@@ -190,15 +194,20 @@ module Administrate
             declared = params.slice(*defn.params.keys, *Uploads::Declarations.param_schemas(defn).keys)
             arguments = { admin:, params: Uploads::Declarations.resolve_params(defn, admin, declared) }
             arguments[:record] = Actions.find_record!(defn.model_class, id) if defn.on == :member
-            result = defn.invoke.call(**arguments)
-            return { error: failure_message(defn, result, arguments[:record]) } if failed?(result)
+            returned = defn.invoke.call(**arguments)
+            result = returned.is_a?(Result) ? returned.record : returned
+            data = ResultData.extract!(returned, tool_name: Actions.tool_name(defn))
+            failures = [returned, result].select { |candidate| failed?(candidate) }
+            unless failures.empty?
+              return { error: failure_message(defn, failures.first, arguments[:record]), details: data }
+            end
 
-            { data: success_data(defn, id, result) }
+            { data: success_data(defn, id, result, data) }
           end
 
-          def success_data(defn, id, result)
+          def success_data(defn, id, result, data)
             id = result.id if defn.on == :collection && result.is_a?(ActiveRecord::Base)
-            { status: 'ok', model: defn.model_class.name.underscore, id:, action: defn.name.to_s }.compact
+            { status: 'ok', model: defn.model_class.name.underscore, id:, action: defn.name.to_s, data: }.compact
           end
 
           def failed?(result)
