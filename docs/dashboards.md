@@ -101,15 +101,17 @@ end
   returned it, so an unsaved or invalid record is still an error, and a collection action still
   answers its `id`.
 - `ActionResult.failure(message, data:)` is an error with `message`, or `<action> failed` without
-  one. The error's content stays the message alone; when there is data, the result's
-  `structuredContent` carries `{ "error": message, "data": … }`.
+  one. The error's first content block stays the message alone. When there is data, a second block
+  carries `{ "error": message, "data": … }` as JSON, and the result's `structuredContent` carries the
+  same object, so clients that only read the content still see the data.
 - These two are the only constructors. Any result object that answers `mcp_data` with a Hash works
   the same way, so a host's own service result can carry its data without being wrapped; `success?`
   and `error` are read from it as for any other result.
 - A plain Hash returned by the block is not sent back, as before: data reaches the client only when
   the block asks for it, never because a service happened to return a Hash.
 - `data` must be a Hash of JSON values: Hashes with String or Symbol keys, Arrays, Strings, Symbols,
-  Integers, finite Floats, `true`, `false` and `nil`, nested at most 32 levels deep. Convert
+  Integers, finite Floats, `true`, `false` and `nil`, nested at most 32 levels deep. Strings and
+  keys must be valid UTF-8 or convertible to it, so check bytes read from a file. Convert
   anything else, such as a time (`at.iso8601`) or a record (`record.id`), yourself. The engine
   encodes a plain copy it builds from those values, so an object's own `as_json` never runs, and a
   key given both as a String and as a Symbol is refused rather than sent twice. The copy's JSON may

@@ -80,13 +80,15 @@ RSpec.describe 'Data returned by an mcp_action' do
       expect(result.content.first[:text]).to eq("Label can't be blank")
     end
 
-    it 'reports a failed Result with its message as the content and its data as structured content' do
+    it 'reports a failed Result with its message first, then its data as JSON text and structured content' do
       tool = build_tool { |**| failure('2 unknown slugs', data: { unknown: %w[x y] }) }
 
       result = tool.call(id: gadget.id, server_context: ctx)
 
       expect(result.error?).to be(true)
-      expect(result.content.pluck(:text)).to eq(['2 unknown slugs'])
+      expect(result.content.first[:text]).to eq('2 unknown slugs')
+      expect(JSON.parse(result.content.second[:text]))
+        .to eq('error' => '2 unknown slugs', 'data' => { 'unknown' => %w[x y] })
       expect(result.structured_content).to eq(error: '2 unknown slugs', data: { 'unknown' => %w[x y] })
     end
 
@@ -108,6 +110,14 @@ RSpec.describe 'Data returned by an mcp_action' do
       structured = response.dig(:result, :structuredContent)
       expect(structured).to eq(status: 'ok', model: 'gadget', id: gadget.id, action: 'fix', data: { 'n' => 1 })
       expect(JSON.parse(response.dig(:result, :content, 0, :text))).to eq(JSON.parse(structured.to_json))
+    end
+
+    it 'transcodes a String in another valid encoding to UTF-8' do
+      data = { name: 'café'.encode(Encoding::ISO_8859_1) }
+
+      result = build_tool { |**| returning(data) }.call(id: gadget.id, server_context: ctx)
+
+      expect(answer(result)['data']).to eq('name' => 'café')
     end
 
     it 'encodes the checked copy, not the host object, so its own as_json never runs' do
@@ -165,7 +175,10 @@ RSpec.describe 'Data returned by an mcp_action' do
       'a float that is not finite' => [{ ratio: Float::NAN }, 'data.ratio is not a finite number'],
       'data that is not a Hash' => [%w[a b], 'data (Array) is not a Hash'],
       'a cycle' => [{}.tap { |hash| hash[:self] = hash }, 'is nested deeper than 32 levels'],
-      'data nested too deep' => [(1..33).reduce('leaf') { |inner, _| { n: inner } }, 'data.n.n.n']
+      'data nested too deep' => [(1..33).reduce('leaf') { |inner, _| { n: inner } }, 'data.n.n.n'],
+      'a String that is not valid UTF-8' => [{ name: "caf\xC3" }, 'data.name is not valid UTF-8'],
+      'binary bytes that have no UTF-8 form' => [{ raw: "\xFF".b }, 'data.raw cannot be converted to UTF-8'],
+      'a key that is not valid UTF-8' => [{ "k\xC3" => 1 }, 'a key of data is not valid UTF-8']
     }.each do |label, (data, message)|
       it "reports #{label} as an error naming where it is, after the action ran" do
         tool = build_tool do |record:, **|

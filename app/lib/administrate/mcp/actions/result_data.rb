@@ -39,9 +39,18 @@ module Administrate
             case value
             when Hash then normalize_hash!(value, path, depth)
             when Array then value.each_with_index.map { |item, index| normalize!(item, "#{path}[#{index}]", depth + 1) }
-            when String, Symbol then String.new(value.to_s)
+            when String, Symbol then normalize_string!(value, path)
             else normalize_scalar!(value, path)
             end
+          end
+
+          def normalize_string!(value, path)
+            copy = String.new(value.to_s).encode(Encoding::UTF_8)
+            raise TypeError, "#{path} is not valid UTF-8" unless copy.valid_encoding?
+
+            copy
+          rescue EncodingError
+            raise TypeError, "#{path} cannot be converted to UTF-8"
           end
 
           def normalize_hash!(hash, path, depth)
@@ -54,7 +63,7 @@ module Administrate
           end
 
           def key_name!(key, path)
-            return String.new(key.to_s) if key.is_a?(String) || key.is_a?(Symbol)
+            return normalize_string!(key, "a key of #{path}") if key.is_a?(String) || key.is_a?(Symbol)
 
             raise TypeError, "#{path} has a key (#{key.class}) that is not a String or Symbol"
           end
