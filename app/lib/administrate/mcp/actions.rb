@@ -180,7 +180,7 @@ module Administrate
               if outcome.key?(:error)
                 error_response(outcome[:error], data: outcome[:details])
               else
-                json_response(outcome[:data])
+                json_response(outcome[:data], structured: true)
               end
             end
           end
@@ -195,7 +195,7 @@ module Administrate
             arguments = { admin:, params: Uploads::Declarations.resolve_params(defn, admin, declared) }
             arguments[:record] = Actions.find_record!(defn.model_class, id) if defn.on == :member
             returned = defn.invoke.call(**arguments)
-            result = returned.is_a?(Result) ? returned.record : returned
+            result = returned.is_a?(ActionResult) ? returned.record : returned
             data = ResultData.extract!(returned, tool_name: Actions.tool_name(defn))
             failures = [returned, result].select { |candidate| failed?(candidate) }
             unless failures.empty?

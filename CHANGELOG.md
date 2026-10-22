@@ -11,22 +11,23 @@ minor release may change behaviour a host depends on; the entry says so when it 
 ### Added
 
 - An `mcp_action` block can send data back to the client. It returns
-  `Administrate::MCP::Result.success(record:, data:)`, or any result object answering `mcp_data`,
-  and the response gains a `data` key next to `status`, `model`, `id` and `action`, which are
-  unchanged. The record, optional, goes through the same checks as a record returned directly, so
-  an unsaved or invalid one is still an error and a collection action still answers its `id`.
-  `Result.failure(message, data:)` is an error whose first content block is the message, as before,
-  followed by a second one carrying `{ "error": message, "data": … }` as JSON when there is data.
-  The data must be a Hash of plain JSON values and its JSON at most `config.action_data_max_bytes`
-  (new, 32 KB by default, `nil` for no limit); anything else is answered as an error naming the
-  offending path and saying the action ran. A plain Hash returned by a block is still not sent
-  back. See [Returning data from an action](docs/dashboards.md#returning-data-from-an-action).
+  `Administrate::MCP::ActionResult.success(record:, data:)`, or any result object answering
+  `mcp_data`, and the answer gains a `data` key next to `status`, `model`, `id` and `action`, which
+  are unchanged. The record, optional, goes through the same checks as a record returned directly,
+  so an unsaved or invalid one is still an error and a collection action still answers its `id`.
+  `ActionResult.failure(message, data:)` is an error whose content is the message alone, as before,
+  with `{ "error": message, "data": … }` as the result's `structuredContent` when there is data. The
+  data must be a Hash of plain JSON values nested at most 32 levels deep; the engine encodes a copy
+  built from those values, never the host's objects, and its JSON may be at most
+  `config.action_data_max_bytes` (new, 32 KB by default, `nil` for no limit). Anything else is
+  answered as an error naming the offending path and saying the action ran. A plain Hash returned
+  by a block is still not sent back. See
+  [Returning data from an action](docs/dashboards.md#returning-data-from-an-action).
 
 ### Changed
 
-- A tool error may now carry a second content block. Clients that read only the first block still
-  get the message on its own; only failures that return data, through `Result.failure` or a result
-  answering `mcp_data`, add the second block.
+- A successful `mcp_action` call now also returns its answer as the result's `structuredContent`,
+  the same object as the JSON in its text content, which is unchanged.
 
 ## [0.4.0] - 2026-10-21
 
