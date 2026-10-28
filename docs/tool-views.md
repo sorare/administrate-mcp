@@ -42,7 +42,13 @@ action's outcome and the data it returned, then loads the record whose `id` the 
 A failed action shows its error message.
 
 When the person moves to another page of the view, the view tells the client which records are on
-screen (`ui/update-model-context`), so the next answer is about what the person is looking at.
+screen (`ui/update-model-context`), so the next answer is about what the person is looking at. It
+names them by resource and id only. Record text such as a name, and the person's search terms, stay
+out of it: a model reads that context as coming from the client, and record text is written by
+whoever owns the record.
+
+The field hints name an associated resource only when the caller can list it, as
+`admin_resource_list_resources` does.
 
 ## Images and other external content
 
@@ -89,8 +95,10 @@ mcp_action :approve, description: 'Approve a review.', view: 'ReviewQueueView' d
 end
 ```
 
-`tool_view` takes `visibility: %i[app]` for a tool only the view calls, which the client keeps out
-of the model's tool list. The tool still runs every check a model call runs.
+`tool_view` takes `visibility: %i[app]` for a tool only the view calls, which a client that supports
+the extension keeps out of the model's tool list. It is not access control: a client without the
+extension lists and calls the tool like any other, so the tool must run every check a model call
+would need, and it does, since it is an ordinary tool on the server.
 
 The engine wraps the script in an HTML document with a shared runtime, `window.AdministrateMCP`:
 
@@ -112,7 +120,9 @@ and CSS variables. The stylesheet it ships defines `--am-*` custom properties fr
 with light and dark fallbacks, for a view's own stylesheet to use.
 
 A view renders admin data. Build its DOM with `h` or `textContent`, never `innerHTML`, so a record
-cannot inject markup into the page.
+cannot inject markup into the page. `h` only attaches functions as event handlers, and drops an
+`href`, `src` or other URL attribute that is not `http` or `https`; `openLink` refuses the same
+URLs. Keep record text out of `updateModelContext` and `sendMessage`: refer to records by id.
 
 ## Asking for a view
 

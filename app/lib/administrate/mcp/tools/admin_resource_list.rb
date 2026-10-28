@@ -106,7 +106,7 @@ module Administrate
 
           response = build_response(records, dashboard, page, per_page, fields:, expand:)
           columns = response[:columns].drop(1).map(&:to_sym)
-          json_response(response, meta: ToolViews::FieldHints.meta(entry, dashboard, columns))
+          json_response(response, meta: ToolViews::FieldHints.meta(entry, dashboard, columns, admin:))
         end
 
         def self.build_response(records, dashboard, page, per_page, fields: nil, expand: nil)

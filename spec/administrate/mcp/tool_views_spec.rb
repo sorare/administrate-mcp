@@ -100,6 +100,21 @@ RSpec.describe 'Tool views' do
       expect(batch.to_h.dig(:_meta, 'administrate-mcp/view', :fields)).to have_key(:gadgets)
     end
 
+    it 'does not name an associated resource the caller cannot list' do
+      hidden = Class.new(Administrate::MCP::Authorization::Base) do
+        def authorized?(_admin, record_or_class, action)
+          !(record_or_class == Admin && action == :index?)
+        end
+      end
+      Administrate::MCP.config.authorization = hidden.new
+      widget = create(:widget)
+      result = Administrate::MCP::Tools::AdminResourceShow.call(server_context:, resource: 'widget', id: widget.id)
+      fields = result.to_h.dig(:_meta, 'administrate-mcp/view', :fields)
+
+      expect(fields[:admin]).to eq(kind: :belongs_to)
+      expect(fields[:gadgets]).to include(resource: 'gadget')
+    end
+
     it 'keeps the text content the model reads unchanged' do
       widget = create(:widget)
       result = Administrate::MCP::Tools::AdminResourceShow.call(server_context:, resource: 'widget', id: widget.id)
