@@ -13,6 +13,8 @@ module Administrate
 
         ASSOCIATION_KINDS = %i[belongs_to has_many polymorphic].freeze
 
+        URL_FIELD_CLASSES = ['Administrate::Field::Url'].freeze
+
         class << self
           def meta(entry, dashboard, attributes, admin:)
             return nil unless Administrate::MCP.config.tool_views
@@ -35,12 +37,19 @@ module Administrate
           def kind_for(field_spec)
             field_class = FieldSerializer.resolve_field_class(field_spec)
             return :has_many if FieldSerializer.expandable_field?(field_class)
+            return :url if url_field?(field_class)
 
             serializer = FieldSerializer.serializer_for(field_spec)
             serializer.is_a?(Symbol) ? serializer : :value
           end
 
           private
+
+          def url_field?(field_class)
+            return false unless field_class.is_a?(Class)
+
+            field_class.ancestors.any? { |ancestor| URL_FIELD_CLASSES.include?(ancestor.name) }
+          end
 
           def association_hint(model_class, attr_name, kind, admin)
             reflection = model_class.reflect_on_association(attr_name)

@@ -29,7 +29,7 @@ full result, including a `_meta` entry the host keeps out of the model's context
 
 The resource view needs nothing from a dashboard. `admin_resource_list` and `admin_resource_show`
 add, when views are on, a `_meta["administrate-mcp/view"]` entry to their result: the resource name
-and, per returned field, its kind (`belongs_to`, `has_many`, `datetime`, `enum`, `attachment`,
+and, per returned field, its kind (`belongs_to`, `has_many`, `datetime`, `enum`, `attachment`, `url`,
 `scalar`, ...) and, for an association to a registered resource, that resource's name and the
 foreign key a filtered list of it takes. Paging, sorting, search and following an association are
 ordinary `tools/call` requests the client makes on the view's behalf, so they go through the same
@@ -49,6 +49,10 @@ whoever owns the record.
 
 The field hints name an associated resource only when the caller can list it, as
 `admin_resource_list_resources` does.
+
+Only `Field::Url` fields, attachments and the record's own admin link become links. A text field
+that happens to hold a URL stays text, as on the admin show page, since end users write many of
+those fields.
 
 ## Images and other external content
 

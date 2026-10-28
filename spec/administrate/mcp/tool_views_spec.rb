@@ -115,6 +115,14 @@ RSpec.describe 'Tool views' do
       expect(fields[:gadgets]).to include(resource: 'gadget')
     end
 
+    it 'marks URL fields, so the view links them and leaves URL-shaped text as text' do
+      hints = Administrate::MCP::ToolViews::FieldHints
+
+      expect(hints.kind_for(Administrate::Field::Url)).to eq(:url)
+      expect(hints.kind_for(Administrate::Field::Url.with_options(searchable: false))).to eq(:url)
+      expect(hints.kind_for(Administrate::Field::String)).to eq(:scalar)
+    end
+
     it 'keeps the text content the model reads unchanged' do
       widget = create(:widget)
       result = Administrate::MCP::Tools::AdminResourceShow.call(server_context:, resource: 'widget', id: widget.id)
