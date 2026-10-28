@@ -16,6 +16,7 @@ module Administrate
         description 'Search and list admin resources. ' \
                     'Supports text search, filters, sorting, field selection, and HasMany expansion.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
+        tool_view 'Administrate::MCP::ToolViews::ResourceView'
 
         input_schema(
           properties: {
@@ -103,7 +104,9 @@ module Administrate
           scope = apply_sort(scope, dashboard, sort, sort_direction)
           records = scope.page(page).per(per_page)
 
-          json_response(build_response(records, dashboard, page, per_page, fields:, expand:))
+          response = build_response(records, dashboard, page, per_page, fields:, expand:)
+          columns = response[:columns].drop(1).map(&:to_sym)
+          json_response(response, meta: ToolViews::FieldHints.meta(entry, dashboard, columns))
         end
 
         def self.build_response(records, dashboard, page, per_page, fields: nil, expand: nil)

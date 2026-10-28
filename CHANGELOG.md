@@ -8,6 +8,23 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Added
+
+- Tool views, the server side of the MCP Apps extension (SEP-1865), off until a host sets
+  `config.tool_views = true`. The server then declares the `io.modelcontextprotocol/ui` extension,
+  publishes each linked view as a `ui://<server-name>/<view>` resource, and links tools to them in
+  `_meta.ui.resourceUri`. `admin_resource_list` and `admin_resource_show` render in a resource view
+  that pages, sorts, searches and follows associations through `tools/call`, and add a
+  `_meta["administrate-mcp/view"]` entry to their result describing the returned fields;
+  `sidekiq_stats` and `sidekiq_retries` render in a Sidekiq view; an `mcp_action` renders in the
+  resource view, which confirms the action and loads the record it saved. A host builds its own view by
+  subclassing `Administrate::MCP::ToolView` and links it with `tool_view` on a tool or `view:` on an
+  `mcp_action`. `config.tool_view_csp` declares the origins views may load from. With views off,
+  `tools/list`, `resources/list` and every tool result are unchanged. See
+  [Tool views](docs/tool-views.md).
+- A `missing_view` category for `report_mcp_improvement`, for a result that would be easier to
+  browse or act on as a tool view. It is stored as `6`.
+
 ## [0.5.0] - 2026-10-22
 
 ### Added

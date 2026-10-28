@@ -12,7 +12,8 @@ module Administrate
         'missing_field' => 2,
         'missing_resource' => 3,
         'serialization' => 4,
-        'other' => 5
+        'other' => 5,
+        'missing_view' => 6
       }.freeze
     end
   end

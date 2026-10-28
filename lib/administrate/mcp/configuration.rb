@@ -60,6 +60,8 @@ module Administrate
                     :feedback_tool,
                     :sidekiq_stats_provider,
                     :action_data_max_bytes,
+                    :tool_views,
+                    :tool_view_csp,
                     :admin_route_namespace,
                     :admin_url_options,
                     :skipped_field_classes,
@@ -105,6 +107,8 @@ module Administrate
         @sidekiq_stats_provider = nil
         @action_data_max_bytes = 32_768
         @uploads = UploadsConfiguration.new
+        @tool_views = false
+        @tool_view_csp = {}
       end
 
       def assign_fields

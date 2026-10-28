@@ -72,6 +72,10 @@ base class, is not applied to every resource. A subclass that wants one declares
   - `uploads:` (`true`, a list of attachment attributes, or per-attribute `content_types:` and
     `max_size:`) adds an optional `<attribute>_upload_id` param for each of them, and the block
     receives the uploaded file as `params[:<attribute>]`. See [Presigned uploads](uploads.md).
+  - Once `config.tool_views` is on, an MCP Apps client renders the action's result in the resource
+    view: the outcome, the returned data and the saved record. `view:` (an
+    `Administrate::MCP::ToolView` subclass or its name) picks another view. See
+    [Tool views](tool-views.md).
 
 ## Returning data from an action
 

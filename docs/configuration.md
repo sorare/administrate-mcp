@@ -205,6 +205,8 @@ end
 | `skipped_field_classes`     | Password                           | Field class names never serialized                                                                                                                                               |
 | `has_many_field_classes`    | HasMany                            | Field class names treated as expandable collections                                                                                                                              |
 | `field_serializers`         | see above                          | Field class name to serializer                                                                                                                                                   |
+| `tool_views`                | `false`                            | Whether tools link to their [tool views](tool-views.md) and the server publishes them, for clients that support MCP Apps |
+| `tool_view_csp`             | `{}`                               | Origins a tool view may load from: `resource_domains`, `connect_domains`, `frame_domains`, `base_uri_domains`. See [Tool views](tool-views.md#images-and-other-external-content) |
 | `uploads`                   | disabled                           | Presigned uploads: `enabled`, `storage`, `allowed_content_types`, `max_size`, `max_files`, `url_ttl`, `batch_ttl`. See [Presigned uploads](uploads.md)                       |
 
 ## Authorization adapters

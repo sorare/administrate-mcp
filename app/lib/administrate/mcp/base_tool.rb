@@ -32,6 +32,21 @@ module Administrate
           @required_scopes || []
         end
 
+        def tool_view(view = nil, visibility: nil)
+          if view
+            @tool_view = view
+            @tool_view_visibility = visibility&.map(&:to_s)
+          end
+          resolve_tool_view(@tool_view)
+        end
+
+        def meta_value
+          view = tool_view
+          return super unless view && Administrate::MCP.config.tool_views
+
+          ::MCP::Apps.tool_meta(resource_uri: view.uri, visibility: @tool_view_visibility, meta: super)
+        end
+
         def call(server_context:, **args)
           instrument(server_context) { call_with_context(server_context, **args) }
         rescue ResourceForbiddenError, InvalidArgumentError => e
@@ -106,8 +121,16 @@ module Administrate
           ::MCP::Tool::Response.new([{ type: 'text', text: }])
         end
 
-        def json_response(data, structured: false)
-          ::MCP::Tool::Response.new([{ type: 'text', text: data.to_json }], structured_content: (data if structured))
+        def json_response(data, structured: false, meta: nil)
+          ::MCP::Tool::Response.new(
+            [{ type: 'text', text: data.to_json }],
+            structured_content: (data if structured),
+            meta:
+          )
+        end
+
+        def resolve_tool_view(view)
+          view.is_a?(String) ? view.constantize : view
         end
 
         def error_response(message, data: nil)

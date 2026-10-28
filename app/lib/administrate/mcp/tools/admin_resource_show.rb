@@ -16,6 +16,7 @@ module Administrate
         description 'Show admin resource(s) by ID or slug. ' \
                     'Accepts a single ID or an array of up to 10 IDs for batch lookup.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
+        tool_view 'Administrate::MCP::ToolViews::ResourceView'
 
         input_schema(
           properties: {
@@ -84,7 +85,8 @@ module Administrate
           return error_response("#{resource.capitalize} not found for: #{id}") unless record
 
           json_response(
-            FieldSerializer.serialize(record, dashboard, attributes: attrs, expand: expand_set, resolve_getters: true)
+            FieldSerializer.serialize(record, dashboard, attributes: attrs, expand: expand_set, resolve_getters: true),
+            meta: ToolViews::FieldHints.meta(entry, dashboard, attrs)
           )
         end
 
@@ -105,7 +107,10 @@ module Administrate
               end
             end
 
-          json_response({ columns: %w[url] + columns.map(&:to_s), rows: })
+          json_response(
+            { columns: %w[url] + columns.map(&:to_s), rows: },
+            meta: ToolViews::FieldHints.meta(entry, dashboard, columns)
+          )
         end
 
         def self.find_record(entry, id)

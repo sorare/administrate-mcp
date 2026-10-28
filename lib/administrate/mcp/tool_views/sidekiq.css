@@ -1,0 +1,6 @@
+.am-bars { display: grid; gap: 4px; }
+.am-bar-row { display: grid; grid-template-columns: minmax(120px, 40%) 1fr auto; align-items: center; gap: 8px; }
+.am-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.am-bar-track { background: var(--am-bg-alt); border-radius: 999px; height: 8px; overflow: hidden; }
+.am-bar { display: block; height: 100%; background: var(--am-accent); border-radius: 999px; }
+.am-bar-value { font-variant-numeric: tabular-nums; }

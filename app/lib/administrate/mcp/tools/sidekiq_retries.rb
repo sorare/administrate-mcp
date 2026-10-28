@@ -11,6 +11,7 @@ module Administrate
         description 'Get the Sidekiq retry queue size and optionally the first page of retry entries ' \
                     '(up to 25 jobs with class, error, retry count, and timestamps).'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: false
+        tool_view 'Administrate::MCP::ToolViews::SidekiqView'
 
         input_schema(
           properties: {
