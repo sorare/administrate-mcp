@@ -14,6 +14,7 @@ module Administrate
                     'Returns retry breakdown and optionally per-queue breakdowns. ' \
                     'Each breakdown maps job class names to their pending count.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: false
+        tool_view 'Administrate::MCP::ToolViews::SidekiqView'
 
         input_schema(
           properties: {

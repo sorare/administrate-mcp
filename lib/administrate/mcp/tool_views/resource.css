@@ -1,0 +1,25 @@
+dl.am-fields {
+  display: grid;
+  grid-template-columns: minmax(110px, max-content) 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+dl.am-fields dt { color: var(--am-text-muted); }
+dl.am-fields dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+dl.am-fields dd .am-table-wrap { margin-top: 6px; }
+
+img.am-image {
+  display: block;
+  max-width: min(100%, 320px);
+  max-height: 240px;
+  border-radius: var(--am-radius);
+  border: 1px solid var(--am-border);
+}
+img.am-thumb { display: block; max-width: 48px; max-height: 48px; border-radius: 4px; }
+
+.am-pager { justify-content: flex-end; margin: 10px 0 0; }
+
+@media (max-width: 480px) {
+  dl.am-fields { grid-template-columns: 1fr; gap: 2px; }
+  dl.am-fields dd { margin-bottom: 8px; }
+}

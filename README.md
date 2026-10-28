@@ -22,6 +22,7 @@ permissions the admin UI enforces.
 - [Routes](#routes)
 - [Dashboard declarations](#dashboard-declarations)
 - [Presigned uploads](#presigned-uploads)
+- [Tool views](#tool-views)
 - [Authentication](#authentication)
 - [OAuth](#oauth)
 - [Improving the server from its own use](#improving-the-server-from-its-own-use)
@@ -54,6 +55,9 @@ about your application; everything host-specific goes through `Administrate::MCP
   `<attribute>_upload_id` for each attachment attribute. The file's owner, target, expiry, real size
   and real content type are checked on a copy the client cannot overwrite before the action runs.
   See [Presigned uploads](docs/uploads.md).
+- Tool views, opt-in: MCP Apps clients render list and show results as a browsable table and
+  record page, and Sidekiq results as a panel, and a host can attach views of its own to a tool or
+  an `mcp_action`. The model's text result is unchanged. See [Tool views](docs/tool-views.md).
 - Three ways to authenticate a caller: API keys stored as a digest, an external identity provider
   through `identity_fallback` (a Cloudflare Access verifier ships with the gem), and an optional
   built-in OAuth 2.1 server with Dynamic Client Registration, PKCE and refresh tokens, on by default
@@ -233,6 +237,13 @@ readable fields and writable actions: [docs/dashboards.md](docs/dashboards.md).
 How a client uploads a file to a presigned URL and sets it on an attachment through an action, the
 checks on the uploaded file, and the storage it goes to: [docs/uploads.md](docs/uploads.md).
 
+## Tool views
+
+Interactive views an MCP Apps client renders in place of a tool's text result: a table of records
+with paging, sorting, search and association links for `admin_resource_list` and
+`admin_resource_show`, a Sidekiq panel, and a base class for views of your own. Off until
+`config.tool_views` is set: [docs/tool-views.md](docs/tool-views.md).
+
 ## Authentication
 
 How a request is authenticated (API key, then OAuth token, then `identity_fallback`), how to issue
@@ -264,6 +275,7 @@ Each one names a change you make in a dashboard:
 | `missing_field` | a field the caller needed is not on the show page |
 | `missing_resource` | a dashboard is not exposed, or does not exist |
 | `serialization` | a field came back unreadable and needs a serializer registered |
+| `missing_view` | a result the person needed to browse, compare or act on would be better as a [tool view](docs/tool-views.md) |
 | `other` | anything the categories above do not cover |
 
 A report arrives with the category, the resource it concerns and the client's own account of what it

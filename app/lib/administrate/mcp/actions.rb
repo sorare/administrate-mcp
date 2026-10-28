@@ -12,6 +12,9 @@ module Administrate
     # An action is a member action by default: it takes an `id` and runs against the loaded record.
     # Declared with `on: :collection`, it takes no `id`, loads nothing and runs against the model.
     #
+    # Once `config.tool_views` is on, an action's tool renders in the resource view, which confirms the
+    # action and shows the record it returned. `view:` (a ToolView subclass or its name) picks another.
+    #
     # An action declared with `uploads:` (true, a list of attachment attributes, or a hash of
     # attribute to `content_types:` / `max_size:` overrides) also takes an optional
     # `<attribute>_upload_id` for each of them. The id is resolved into the attachment value before
@@ -34,6 +37,7 @@ module Administrate
           :params,
           :required,
           :uploads,
+          :view,
           :invoke,
           keyword_init: true
         )
@@ -42,11 +46,13 @@ module Administrate
 
       TARGETS = %i[member collection].freeze
 
+      DEFAULT_VIEW = 'Administrate::MCP::ToolViews::ResourceView'
+
       class << self
         # Normalizes the arguments of a `mcp_action` declaration into a spec (everything but the
         # model, which is inferred from the owning dashboard when definitions are built).
         def build_spec(name, description:, on: :member, params: {}, predicate: nil, pundit: nil, scope: :write,
-                       destructive: true, uploads: false, &invoke)
+                       destructive: true, uploads: false, view: nil, &invoke)
           raise ArgumentError, "#{name}: a block is required to invoke the action" unless invoke
           raise ArgumentError, "#{name}: on: must be :member or :collection" unless TARGETS.include?(on)
 
@@ -63,6 +69,7 @@ module Administrate
             params: normalized.transform_values { |spec| spec.except(:required) },
             required: normalized.reject { |_, spec| spec[:required] == false }.keys,
             uploads: Uploads::Declarations.normalize(uploads, action_name: name),
+            view:,
             invoke:
           }
         end
@@ -154,6 +161,7 @@ module Administrate
             klass.annotations(read_only_hint: false, destructive_hint: defn.destructive, open_world_hint: true)
             klass.requires_scope defn.scope
             klass.input_schema(**schema_for(defn, resource))
+            klass.tool_view(defn.view || DEFAULT_VIEW)
             define_behaviors(klass, defn)
             klass
           end

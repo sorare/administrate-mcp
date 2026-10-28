@@ -34,7 +34,8 @@ RSpec.describe Administrate::MCP::Feedback do
         'missing_field' => 2,
         'missing_resource' => 3,
         'serialization' => 4,
-        'other' => 5
+        'other' => 5,
+        'missing_view' => 6
       )
       expect(described_class.statuses).to eq('pending' => 0, 'accepted' => 1, 'rejected' => 2, 'shipped' => 3)
     end

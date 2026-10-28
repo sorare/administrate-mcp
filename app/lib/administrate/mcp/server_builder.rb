@@ -22,13 +22,16 @@ module Administrate
         def build(server_context:)
           server_context[:authorization_errors] ||= []
           config = Administrate::MCP.config
+          tools = discover_tools(server_context)
           server =
             ::MCP::Server.new(
               name: config.server_name,
               version: config.server_version,
-              tools: discover_tools(server_context),
+              tools:,
+              resources: tool_view_resources(tools),
               server_context:
             )
+          server.capabilities = server.capabilities.merge(extensions: ::MCP::Apps.capability) if config.tool_views
           server.transport =
             ::MCP::Server::Transports::StreamableHTTPTransport.new(
               server,
@@ -52,6 +55,12 @@ module Administrate
           built_in = built_in_tools
           built_in -= [Tools::UploadsPrepare] unless Uploads::Declarations.any?(action_tools)
           (built_in + host_tools).uniq + action_tools
+        end
+
+        def tool_view_resources(tools)
+          return [] unless Administrate::MCP.config.tool_views
+
+          tools.filter_map(&:tool_view).uniq.map(&:resource)
         end
 
         def built_in_tools

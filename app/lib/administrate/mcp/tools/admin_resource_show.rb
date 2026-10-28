@@ -16,6 +16,7 @@ module Administrate
         description 'Show admin resource(s) by ID or slug. ' \
                     'Accepts a single ID or an array of up to 10 IDs for batch lookup.'
         annotations read_only_hint: true, destructive_hint: false, open_world_hint: true
+        tool_view 'Administrate::MCP::ToolViews::ResourceView'
 
         input_schema(
           properties: {
@@ -78,19 +79,22 @@ module Administrate
           attrs, expand_set =
             resolve_attributes_and_expansions(dashboard, fields, expand, :show_page_attributes, MAX_EXPAND)
 
-          return batch_show(entry, dashboard, id, resource, attributes: attrs, expand: expand_set) if id.is_a?(Array)
+          if id.is_a?(Array)
+            return batch_show(entry, dashboard, id, resource, attributes: attrs, expand: expand_set, admin:)
+          end
 
           record = find_record(entry, id)
           return error_response("#{resource.capitalize} not found for: #{id}") unless record
 
           json_response(
-            FieldSerializer.serialize(record, dashboard, attributes: attrs, expand: expand_set, resolve_getters: true)
+            FieldSerializer.serialize(record, dashboard, attributes: attrs, expand: expand_set, resolve_getters: true),
+            meta: ToolViews::FieldHints.meta(entry, dashboard, attrs, admin:)
           )
         end
 
         # Getters stay unresolved here: they are per-record work, and a batch multiplies them by up
         # to MAX_BATCH. Read one id at a time when a getter-backed attribute matters.
-        def self.batch_show(entry, dashboard, ids, resource, attributes:, expand:)
+        def self.batch_show(entry, dashboard, ids, resource, attributes:, expand:, admin:)
           reject_over_limit!('ids', ids.size, MAX_BATCH)
           columns = FieldSerializer.resolve_columns(dashboard, attributes)
 
@@ -105,7 +109,10 @@ module Administrate
               end
             end
 
-          json_response({ columns: %w[url] + columns.map(&:to_s), rows: })
+          json_response(
+            { columns: %w[url] + columns.map(&:to_s), rows: },
+            meta: ToolViews::FieldHints.meta(entry, dashboard, columns, admin:)
+          )
         end
 
         def self.find_record(entry, id)

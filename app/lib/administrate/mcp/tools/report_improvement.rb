@@ -9,7 +9,8 @@ module Administrate
         tool_name 'report_mcp_improvement'
         requires_roles
         description 'Report an improvement for the MCP server (misleading description, missing filter, ' \
-                    'bad serialization, missing resource, etc.).'
+                    'bad serialization, missing resource, etc.). Use missing_view when the person needed to ' \
+                    'browse, compare or act on a result and plain text was a poor fit for it.'
 
         input_schema(
           properties: {
