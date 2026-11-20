@@ -31,6 +31,19 @@ RSpec.describe Administrate::MCP::JsonRpcController do
       end
     end
 
+    context 'with a skills/list request' do
+      it 'lists the skills the host serves' do
+        Administrate::MCP.config.skill_paths = [File.expand_path('../fixtures/skills', __dir__)]
+
+        post '/', params: { jsonrpc: '2.0', method: 'skills/list', id: 1 }.to_json, headers: headers
+
+        expect(response).to have_http_status(:ok)
+        expect(response.parsed_body.dig('result', 'skills').pluck('uri')).to eq(
+          %w[skill://greeting/SKILL.md skill://write-guide/SKILL.md]
+        )
+      end
+    end
+
     context 'without authentication' do
       it 'returns 401 with X-Auth-Error: unknown and error code -32001' do
         post '/', params: { jsonrpc: '2.0', method: 'tools/list', id: 1 }.to_json,

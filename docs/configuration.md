@@ -101,6 +101,7 @@ class Configuration
                 :authorization,
                 :default_required_roles,
                 :tool_paths,
+                :skill_visible,
                 :dashboard_paths,
                 :instrument,
                 :on_tool_call,
@@ -118,7 +119,7 @@ class Configuration
                 :has_many_field_classes,
                 :field_serializers
 
-  attr_reader :api_key_token_prefix
+  attr_reader :api_key_token_prefix, :skill_paths
 
   def assign_identity
     @server_name = 'administrate_mcp'
@@ -135,6 +136,8 @@ class Configuration
     @authorization = default_authorization
     @default_required_roles = []
     @tool_paths = []
+    @skill_paths = []
+    @skill_visible = ->(_skill, _server_context) { true }
     @dashboard_paths = nil
   end
 
@@ -188,6 +191,8 @@ end
 | `authorization`             | Pundit if defined, else Permissive | Adapter: `authorize!`, `authorized?`, `authorize_roles!`                                                                                                                         |
 | `default_required_roles`    | `[]`                               | Roles a tool requires unless it declares its own                                                                                                                                 |
 | `tool_paths`                | `[]`                               | Directories scanned for extra `BaseTool` subclasses                                                                                                                              |
+| `skill_paths`               | `[]`                               | Directories holding skill directories, each with its `SKILL.md`, served through the MCP Skills extension. See [Skills](skills.md) |
+| `skill_visible`             | `true`                             | Proc `(skill, server_context)`; a skill it rejects is neither listed nor readable in that request. See [Skills](skills.md) |
 | `dashboard_paths`           | `app/dashboards`                   | Where dashboards are found                                                                                                                                                       |
 | `instrument`                | yields                             | Around hook `(tool_name:, admin:, &block)`                                                                                                                                       |
 | `on_tool_call`              | no-op                              | Audit hook `(tool_name:, admin:, arguments:, scopes:)`, after the permission checks                                                                                              |
