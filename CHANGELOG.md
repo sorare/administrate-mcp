@@ -8,6 +8,8 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-20
+
 ### Added
 
 - Skills, the server side of the MCP Skills extension (SEP-2640). `config.skill_paths` names
@@ -240,7 +242,8 @@ minor release may change behaviour a host depends on; the entry says so when it 
   took the gem from git before 0.1.0 must reinstall its migrations rather than migrate
   incrementally.
 
-[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/sorare/administrate-mcp/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/sorare/administrate-mcp/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/sorare/administrate-mcp/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/sorare/administrate-mcp/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/sorare/administrate-mcp/compare/v0.3.1...v0.4.0
