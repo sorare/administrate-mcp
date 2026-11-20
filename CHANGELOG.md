@@ -8,6 +8,18 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Added
+
+- Skills, the server side of the MCP Skills extension (SEP-2640). `config.skill_paths` names
+  directories of skills, each with its `SKILL.md`; the server then declares the
+  `io.modelcontextprotocol/skills` extension and serves them with their files. `config.skill_visible`
+  decides per request which skills are listed and readable. Without `skill_paths`, nothing changes.
+  See [Skills](docs/skills.md).
+
+### Changed
+
+- The `mcp` dependency is now `~> 1.10`, for its Skills extension.
+
 ### Fixed
 
 - The name of a dynamically registered OAuth client keeps its quotes and ampersands as typed. With

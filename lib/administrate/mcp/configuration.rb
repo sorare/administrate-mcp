@@ -49,6 +49,7 @@ module Administrate
                     :authorization,
                     :default_required_roles,
                     :tool_paths,
+                    :skill_visible,
                     :dashboard_paths,
                     :instrument,
                     :on_tool_call,
@@ -68,7 +69,7 @@ module Administrate
                     :has_many_field_classes,
                     :field_serializers
 
-      attr_reader :api_key_token_prefix, :uploads
+      attr_reader :api_key_token_prefix, :uploads, :skill_paths
 
       def initialize
         assign_identity
@@ -91,6 +92,8 @@ module Administrate
         @authorization = default_authorization
         @default_required_roles = []
         @tool_paths = []
+        @skill_paths = []
+        @skill_visible = ->(_skill, _server_context) { true }
         @dashboard_paths = nil
       end
 
@@ -125,6 +128,15 @@ module Administrate
         raise ArgumentError, 'api_key_token_prefix cannot be blank' if prefix.blank?
 
         @api_key_token_prefix = prefix.to_s
+      end
+
+      def skill_paths=(paths)
+        @skill_paths = Array(paths)
+        @skills = nil
+      end
+
+      def skills
+        @skills ||= skill_paths.flat_map { |path| ::MCP::Skill.from_directory(path.to_s) }
       end
 
       def register_field(class_name, as: nil, &serializer)
