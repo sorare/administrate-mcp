@@ -70,7 +70,7 @@ Both must pass before a change is pushed. CI runs the same two commands.
 `Gadget`; see [docs/development.md](docs/development.md).
 
 When a change depends on how the `mcp` gem behaves, read that gem's source for the version in
-`Gemfile.lock`, and check the oldest version the gemspec allows (`~> 1.5`) when it matters.
+`Gemfile.lock`, and check the oldest version the gemspec allows (`~> 1.10`) when it matters.
 
 ## Conventions
 

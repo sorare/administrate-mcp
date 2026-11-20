@@ -6,4 +6,3 @@
 /spec/dummy/tmp/*
 !/spec/dummy/tmp/.keep
 /spec/dummy/storage/
-Gemfile.lock
