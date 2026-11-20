@@ -2,6 +2,7 @@
 
 RSpec.describe Administrate::MCP::ServerBuilder do
   let(:admin) { create(:admin, :full_access) }
+  let(:skills_root) { File.expand_path('../../fixtures/skills', __dir__) }
 
   describe '.build' do
     it 'seeds the authorization errors array in the caller context' do
@@ -24,6 +25,33 @@ RSpec.describe Administrate::MCP::ServerBuilder do
 
       expect(server.name).to eq('dummy_admin')
       expect(server.version).to eq('1.2.3')
+    end
+
+    it 'serves no skills by default' do
+      server = described_class.build(server_context: { admin:, scopes: [] })
+
+      expect(server.skills).to be_nil
+    end
+
+    it 'serves the skills found under skill_paths, with their files' do
+      Administrate::MCP.config.skill_paths = [skills_root]
+      server = described_class.build(server_context: { admin:, scopes: [] })
+
+      expect(server.skills.map(&:name)).to eq(%w[greeting write-guide])
+      expect(server.skills.first.to_h[:resources].pluck(:uri)).to include('skill://greeting/references/tone.md')
+    end
+
+    it 'serves only the skills skill_visible accepts for the request' do
+      Administrate::MCP.config.skill_paths = [skills_root]
+      Administrate::MCP.config.skill_visible = lambda do |skill, server_context|
+        skill.name != 'write-guide' || server_context[:scopes].include?('write')
+      end
+
+      reader = described_class.build(server_context: { admin:, scopes: [] })
+      writer = described_class.build(server_context: { admin:, scopes: ['write'] })
+
+      expect(reader.skills.map(&:name)).to eq(%w[greeting])
+      expect(writer.skills.map(&:name)).to eq(%w[greeting write-guide])
     end
 
     it 'builds a transport that does not serve subscriptions/listen' do

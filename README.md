@@ -244,6 +244,12 @@ with paging, sorting, search and association links for `admin_resource_list` and
 `admin_resource_show`, a Sidekiq panel, and a base class for views of your own. Off until
 `config.tool_views` is set: [docs/tool-views.md](docs/tool-views.md).
 
+## Skills
+
+Agent Skills served next to the tools, through the MCP Skills extension, so every client connected
+to the server gets the instructions with the tools they explain. Off until `config.skill_paths` is
+set: [docs/skills.md](docs/skills.md).
+
 ## Authentication
 
 How a request is authenticated (API key, then OAuth token, then `identity_fallback`), how to issue

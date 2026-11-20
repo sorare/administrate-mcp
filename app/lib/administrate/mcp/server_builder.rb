@@ -22,15 +22,7 @@ module Administrate
         def build(server_context:)
           server_context[:authorization_errors] ||= []
           config = Administrate::MCP.config
-          tools = discover_tools(server_context)
-          server =
-            ::MCP::Server.new(
-              name: config.server_name,
-              version: config.server_version,
-              tools:,
-              resources: tool_view_resources(tools),
-              server_context:
-            )
+          server = new_server(config, discover_tools(server_context), server_context)
           server.capabilities = server.capabilities.merge(extensions: ::MCP::Apps.capability) if config.tool_views
           server.transport =
             ::MCP::Server::Transports::StreamableHTTPTransport.new(
@@ -49,6 +41,17 @@ module Administrate
           server
         end
 
+        def new_server(config, tools, server_context)
+          ::MCP::Server.new(
+            name: config.server_name,
+            version: config.server_version,
+            tools:,
+            resources: tool_view_resources(tools),
+            skills: skills_for(server_context),
+            server_context:
+          )
+        end
+
         def discover_tools(server_context)
           load_host_tools
           action_tools = Actions.tools_for(server_context)
@@ -61,6 +64,13 @@ module Administrate
           return [] unless Administrate::MCP.config.tool_views
 
           tools.filter_map(&:tool_view).uniq.map(&:resource)
+        end
+
+        def skills_for(server_context)
+          config = Administrate::MCP.config
+          return if config.skill_paths.empty?
+
+          config.skills.select { |skill| config.skill_visible.call(skill, server_context) }
         end
 
         def built_in_tools
