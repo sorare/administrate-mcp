@@ -33,7 +33,9 @@ module Administrate
       private
 
       def sanitize_name
-        self.name = ActionController::Base.helpers.strip_tags(name)&.strip if name.present?
+        return if name.blank?
+
+        self.name = Rails::HTML::Sanitizer.best_supported_vendor.full_sanitizer.new.sanitize(name)&.strip
       end
 
       def validate_redirect_uris

@@ -8,6 +8,11 @@ minor release may change behaviour a host depends on; the entry says so when it 
 
 ## [Unreleased]
 
+### Fixed
+
+- The name of a dynamically registered OAuth client keeps its quotes and ampersands as typed. With
+  recent `actionview` releases, stripping its HTML tags also escaped them, storing `&quot;` for `"`.
+
 ## [0.6.0] - 2026-10-28
 
 ### Added
